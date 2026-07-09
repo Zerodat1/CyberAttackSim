@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNumber, IsObject, IsOptional, Min } from "class-validator";
+import { IsNumber, IsObject, IsOptional, Max, Min } from "class-validator";
 
 export class UpdateGameSettingsDto {
   @ApiPropertyOptional()
@@ -7,6 +7,13 @@ export class UpdateGameSettingsDto {
   @IsNumber()
   @Min(0)
   minBet?: number;
+
+  @ApiPropertyOptional({ description: "Percentage of rounds that should be a win, admin-controlled", minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  winRatePercent?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Box, Button, Card, Grid, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, Grid, Slider, Stack, TextField, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import CasinoIcon from "@mui/icons-material/Casino";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
@@ -39,7 +40,7 @@ const GAMES: { gameType: GameKey; label: string; icon: ReactNode; color: string;
     label: "الصاروخ",
     icon: <RocketLaunchIcon />,
     color: "#00b894",
-    description: 'إعدادات هامش الربح والمضاعف الأقصى بصيغة JSON: { "houseEdge": 0.03, "maxMultiplier": 50 }',
+    description: 'المضاعف الأقصى بصيغة JSON: { "maxMultiplier": 50 } — نسبة الفوز تُضبط من الشريط أعلاه',
   },
 ];
 
@@ -73,6 +74,7 @@ function GameSettingsCard(
   const [maxBet, setMaxBet] = useState("");
   const [dailyBetLimit, setDailyBetLimit] = useState("");
   const [winMultiplier, setWinMultiplier] = useState("");
+  const [winRatePercent, setWinRatePercent] = useState(50);
   const [configJson, setConfigJson] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +84,7 @@ function GameSettingsCard(
       setMaxBet(settings.maxBet);
       setDailyBetLimit(settings.dailyBetLimit);
       setWinMultiplier(settings.winMultiplier);
+      setWinRatePercent(Number(settings.winRatePercent));
       setConfigJson(JSON.stringify(settings.config ?? {}, null, 2));
     }
   }, [settings]);
@@ -92,6 +95,7 @@ function GameSettingsCard(
         minBet: Number(minBet),
         maxBet: Number(maxBet),
         dailyBetLimit: Number(dailyBetLimit),
+        winRatePercent,
       };
       if (gameType === "dice") {
         payload.winMultiplier = Number(winMultiplier);
@@ -133,6 +137,25 @@ function GameSettingsCard(
           </Typography>
         </Box>
       </Stack>
+
+      <Box sx={{ mb: 2.5, p: 2, borderRadius: 2, bgcolor: alpha(game.color, 0.08) }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+          <Typography variant="body2" fontWeight={700}>
+            نسبة فوز المستخدمين
+          </Typography>
+          <Typography variant="subtitle2" fontWeight={800} sx={{ color: game.color }}>
+            {winRatePercent}%
+          </Typography>
+        </Stack>
+        <Slider
+          value={winRatePercent}
+          onChange={(_, value) => setWinRatePercent(value as number)}
+          min={0}
+          max={100}
+          step={0.5}
+          sx={{ color: game.color }}
+        />
+      </Box>
 
       <Grid container spacing={2} mb={2}>
         <Grid item xs={4}>

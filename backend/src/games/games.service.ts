@@ -36,13 +36,20 @@ const DEFAULT_SLOT_TIERS: WeightedTier[] = [
   { label: "7️⃣ 7️⃣ 7️⃣", multiplier: 25, weight: 5 },
 ];
 
-const DEFAULT_CRASH_CONFIG = { houseEdge: 0.03, maxMultiplier: 50 };
+// Reference target used to translate a single "win rate %" into the crash math's house edge:
+// under the formula crashPoint = (1 - houseEdge) / (1 - r), P(win at target T) = (1 - houseEdge) / T.
+const CRASH_REFERENCE_TARGET = 2;
+const DEFAULT_CRASH_CONFIG = { maxMultiplier: 50 };
+const DEFAULT_CRASH_WIN_RATE = 48.5; // matches the previous fixed houseEdge of 0.03 at a 2x target
 
-const SETTINGS_DEFAULTS: Record<GameType, { winMultiplier: number; config: Record<string, unknown> | null }> = {
-  [GameType.DICE_GUESS]: { winMultiplier: 9, config: null },
-  [GameType.LUCKY_WHEEL]: { winMultiplier: 1, config: { segments: DEFAULT_WHEEL_SEGMENTS } },
-  [GameType.SLOT_MACHINE]: { winMultiplier: 1, config: { tiers: DEFAULT_SLOT_TIERS } },
-  [GameType.CRASH_GUESS]: { winMultiplier: 1, config: DEFAULT_CRASH_CONFIG },
+const SETTINGS_DEFAULTS: Record<
+  GameType,
+  { winMultiplier: number; winRatePercent: number; config: Record<string, unknown> | null }
+> = {
+  [GameType.DICE_GUESS]: { winMultiplier: 9, winRatePercent: 10, config: null },
+  [GameType.LUCKY_WHEEL]: { winMultiplier: 1, winRatePercent: 60, config: { segments: DEFAULT_WHEEL_SEGMENTS } },
+  [GameType.SLOT_MACHINE]: { winMultiplier: 1, winRatePercent: 50, config: { tiers: DEFAULT_SLOT_TIERS } },
+  [GameType.CRASH_GUESS]: { winMultiplier: 1, winRatePercent: DEFAULT_CRASH_WIN_RATE, config: DEFAULT_CRASH_CONFIG },
 };
 
 @Injectable()
@@ -62,6 +69,7 @@ export class GamesService {
       create: {
         id: gameType,
         winMultiplier: defaults.winMultiplier,
+        winRatePercent: defaults.winRatePercent,
         config: (defaults.config ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     });
@@ -92,18 +100,29 @@ export class GamesService {
     }
   }
 
-  private pickWeightedTier(tiers: WeightedTier[]): { index: number; tier: WeightedTier } {
-    const totalWeight = tiers.reduce((sum, tier) => sum + tier.weight, 0);
+  /**
+   * Rolls win/lose first against the admin-configured win rate, then picks which specific
+   * tier occurs by the relative weights within just that outcome group (winners or losers).
+   * This decouples "how often users win" (admin dial) from "what they win when they do"
+   * (the tiers' relative shape).
+   */
+  private pickTierWithWinRate(tiers: WeightedTier[], winRatePercent: number): { index: number; tier: WeightedTier } {
+    const indexed = tiers.map((tier, index) => ({ tier, index }));
+    const winners = indexed.filter((entry) => entry.tier.multiplier > 0);
+    const losers = indexed.filter((entry) => entry.tier.multiplier <= 0);
+
+    const isWin = randomInt(0, 10_000) < winRatePercent * 100;
+    const pool = isWin ? (winners.length > 0 ? winners : indexed) : losers.length > 0 ? losers : indexed;
+
+    const totalWeight = pool.reduce((sum, entry) => sum + entry.tier.weight, 0);
     let roll = randomInt(0, totalWeight);
-    for (let index = 0; index < tiers.length; index++) {
-      const tier = tiers[index];
-      if (roll < tier.weight) {
-        return { index, tier };
+    for (const entry of pool) {
+      if (roll < entry.tier.weight) {
+        return entry;
       }
-      roll -= tier.weight;
+      roll -= entry.tier.weight;
     }
-    const lastIndex = tiers.length - 1;
-    return { index: lastIndex, tier: tiers[lastIndex] };
+    return pool[pool.length - 1];
   }
 
   private async finalizeRound(params: {
@@ -159,8 +178,10 @@ export class GamesService {
     const settings = await this.getSettings(GameType.DICE_GUESS);
     await this.assertBetAllowed(playerId, GameType.DICE_GUESS, dto.betAmount, settings);
 
-    const rolledNumber = randomInt(0, 10);
-    const isWin = rolledNumber === dto.choice;
+    const winRatePercent = Number(settings.winRatePercent);
+    const isWin = randomInt(0, 10_000) < winRatePercent * 100;
+    const otherNumbers = Array.from({ length: 10 }, (_, i) => i).filter((n) => n !== dto.choice);
+    const rolledNumber = isWin ? dto.choice : otherNumbers[randomInt(0, otherNumbers.length)];
     const multiplier = Number(settings.winMultiplier);
 
     return this.finalizeRound({
@@ -180,7 +201,7 @@ export class GamesService {
     await this.assertBetAllowed(playerId, GameType.LUCKY_WHEEL, dto.betAmount, settings);
 
     const segments = ((settings.config as { segments?: WeightedTier[] } | null)?.segments) ?? DEFAULT_WHEEL_SEGMENTS;
-    const { index, tier } = this.pickWeightedTier(segments);
+    const { index, tier } = this.pickTierWithWinRate(segments, Number(settings.winRatePercent));
 
     return this.finalizeRound({
       playerId,
@@ -199,7 +220,7 @@ export class GamesService {
     await this.assertBetAllowed(playerId, GameType.SLOT_MACHINE, dto.betAmount, settings);
 
     const tiers = ((settings.config as { tiers?: WeightedTier[] } | null)?.tiers) ?? DEFAULT_SLOT_TIERS;
-    const { index, tier } = this.pickWeightedTier(tiers);
+    const { index, tier } = this.pickTierWithWinRate(tiers, Number(settings.winRatePercent));
 
     return this.finalizeRound({
       playerId,
@@ -217,15 +238,20 @@ export class GamesService {
     const settings = await this.getSettings(GameType.CRASH_GUESS);
     await this.assertBetAllowed(playerId, GameType.CRASH_GUESS, dto.betAmount, settings);
 
-    const config = (settings.config as { houseEdge?: number; maxMultiplier?: number } | null) ?? DEFAULT_CRASH_CONFIG;
-    const houseEdge = config.houseEdge ?? DEFAULT_CRASH_CONFIG.houseEdge;
+    const config = (settings.config as { maxMultiplier?: number } | null) ?? DEFAULT_CRASH_CONFIG;
     const maxMultiplier = config.maxMultiplier ?? DEFAULT_CRASH_CONFIG.maxMultiplier;
 
     if (dto.targetMultiplier < 1.01 || dto.targetMultiplier > maxMultiplier) {
       throw new BadRequestException(`Target multiplier must be between 1.01 and ${maxMultiplier}`);
     }
 
-    // Provably-fair-style crash point: uniform random mapped through 1/(1-r), house-edge adjusted.
+    // Derive the crash formula's house edge from the admin's win-rate dial, evaluated at a
+    // 2x reference target: under crashPoint = (1 - houseEdge) / (1 - r), P(win at T) = (1 - houseEdge) / T.
+    // winRatePercent spans 0-100, so houseEdge spans 1 down to -1 (a negative edge simply means
+    // the house pays out more generously than break-even at the reference target).
+    const winRatePercent = Number(settings.winRatePercent);
+    const houseEdge = Math.min(1, Math.max(-1, 1 - (winRatePercent / 100) * CRASH_REFERENCE_TARGET));
+
     const r = randomInt(0, 1_000_000) / 1_000_000;
     const rawCrashPoint = (1 - houseEdge) / (1 - r);
     const crashPoint = Math.min(maxMultiplier, Math.max(1, rawCrashPoint));
