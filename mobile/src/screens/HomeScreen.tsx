@@ -36,6 +36,15 @@ export function HomeScreen({ navigation }: Props) {
       <Text style={styles.greeting}>مرحبًا، {user?.fullName}</Text>
       <Text style={styles.username}>@{user?.username}</Text>
 
+      <View style={styles.navRow}>
+        <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("RoomsList")}>
+          <Text style={styles.navCardText}>الغرف الصوتية</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("ConversationsList")}>
+          <Text style={styles.navCardText}>الرسائل</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.card}>
         {isLoading && <ActivityIndicator color="#5b4cf5" />}
         {!isLoading && !application && (
@@ -75,6 +84,9 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, backgroundColor: "#0f1020" },
   greeting: { fontSize: 22, fontWeight: "700", color: "#fff", textAlign: "right" },
   username: { fontSize: 14, color: "#aab0d8", textAlign: "right", marginBottom: 24 },
+  navRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
+  navCard: { flex: 1, backgroundColor: "#1c1e3a", borderRadius: 14, paddingVertical: 18, alignItems: "center" },
+  navCardText: { color: "#fff", fontWeight: "700" },
   card: { backgroundColor: "#1c1e3a", borderRadius: 16, padding: 20, marginBottom: 20 },
   cardTitle: { color: "#fff", fontSize: 16, fontWeight: "600", textAlign: "right", marginBottom: 12 },
   notes: { color: "#aab0d8", textAlign: "right", marginBottom: 12 },

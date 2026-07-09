@@ -9,6 +9,10 @@ import { ApplyAgencyScreen } from "@/screens/ApplyAgencyScreen";
 import { AgentDashboardScreen } from "@/screens/AgentDashboardScreen";
 import { ChargeUserScreen } from "@/screens/ChargeUserScreen";
 import { WithdrawalRequestScreen } from "@/screens/WithdrawalRequestScreen";
+import { RoomsListScreen } from "@/screens/RoomsListScreen";
+import { RoomScreen } from "@/screens/RoomScreen";
+import { ConversationsListScreen } from "@/screens/ConversationsListScreen";
+import { ChatScreen } from "@/screens/ChatScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -21,6 +25,10 @@ export type AppStackParamList = {
   AgentDashboard: undefined;
   ChargeUser: undefined;
   WithdrawalRequest: undefined;
+  RoomsList: undefined;
+  Room: { roomId: string };
+  ConversationsList: undefined;
+  Chat: { conversationId: string; otherUserName: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -50,6 +58,18 @@ function AppNavigator() {
         name="WithdrawalRequest"
         component={WithdrawalRequestScreen}
         options={{ title: "طلب سحب" }}
+      />
+      <AppStack.Screen name="RoomsList" component={RoomsListScreen} options={{ title: "الغرف الصوتية" }} />
+      <AppStack.Screen name="Room" component={RoomScreen} options={{ title: "الغرفة" }} />
+      <AppStack.Screen
+        name="ConversationsList"
+        component={ConversationsListScreen}
+        options={{ title: "الرسائل" }}
+      />
+      <AppStack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={({ route }) => ({ title: route.params.otherUserName })}
       />
     </AppStack.Navigator>
   );

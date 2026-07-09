@@ -63,3 +63,13 @@ export interface CommissionSettings {
   dailyWithdrawLimit: string;
   largeTransactionAlert: string;
 }
+
+export interface RoomSummary {
+  id: string;
+  name: string;
+  isPasswordProtected: boolean;
+  seatCount: number;
+  createdAt: string;
+  owner: { id: string; username: string; fullName: string };
+  _count: { members: number };
+}

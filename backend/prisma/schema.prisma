@@ -71,6 +71,35 @@ enum NotificationType {
   WITHDRAWAL_REJECTED
   LOW_BALANCE
   NEW_DEVICE_LOGIN
+  NEW_MESSAGE
+  ROOM_KICKED
+  ROOM_BANNED
+  ROOM_ROLE_CHANGED
+}
+
+enum RoomMemberRole {
+  OWNER
+  CO_OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum RoomEventType {
+  ROOM_CREATED
+  ROOM_UPDATED
+  MEMBER_JOINED
+  MEMBER_LEFT
+  SEAT_TAKEN
+  SEAT_LEFT
+  SEAT_MUTED
+  SEAT_UNMUTED
+  SEAT_LOCKED
+  SEAT_UNLOCKED
+  MEMBER_KICKED
+  MEMBER_BANNED
+  MEMBER_UNBANNED
+  ROLE_CHANGED
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +136,19 @@ model User {
   reviewedApplications RechargeAgencyApplication[] @relation("ApplicationReviewer")
   reviewedTopUps       TopUpRequest[]              @relation("TopUpReviewer")
   reviewedWithdrawals  WithdrawalRequest[]         @relation("WithdrawalReviewer")
+
+  ownedRooms           Room[]
+  roomMemberships      RoomMember[]
+  roomSeats            RoomSeat[]
+  roomEventsActed      RoomEvent[]           @relation("RoomEventActor")
+  conversationsAsA     Conversation[]        @relation("ConversationUserA")
+  conversationsAsB     Conversation[]        @relation("ConversationUserB")
+  conversationSettings ConversationSetting[]
+  sentMessages         Message[]
+  messageReadReceipts  MessageReadReceipt[]
+  blockedUsers         BlockedUser[]         @relation("BlockerRelation")
+  blockedByUsers       BlockedUser[]         @relation("BlockedRelation")
+  messageReports       MessageReport[]
 
   @@index([globalRole])
 }
@@ -324,4 +366,158 @@ model CommissionSettings {
   dailyWithdrawLimit    Decimal  @default(2000) @db.Decimal(14, 2)
   largeTransactionAlert Decimal  @default(1000) @db.Decimal(14, 2)
   updatedAt             DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Voice Rooms (الغرف الصوتية)
+// ---------------------------------------------------------------------------
+
+model Room {
+  id                  String   @id @default(uuid())
+  name                String
+  ownerId             String
+  owner               User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  isPasswordProtected Boolean  @default(false)
+  passwordHash        String?
+  seatCount           Int      @default(8)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  members RoomMember[]
+  seats   RoomSeat[]
+  events  RoomEvent[]
+
+  @@index([isActive])
+}
+
+model RoomMember {
+  id       String         @id @default(uuid())
+  roomId   String
+  room     Room           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     RoomMemberRole @default(MEMBER)
+  isMuted  Boolean        @default(false)
+  isBanned Boolean        @default(false)
+  joinedAt DateTime       @default(now())
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+}
+
+model RoomSeat {
+  id         String   @id @default(uuid())
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  seatNumber Int
+  occupantId String?
+  occupant   User?    @relation(fields: [occupantId], references: [id], onDelete: SetNull)
+  isLocked   Boolean  @default(false)
+  isMuted    Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([roomId, seatNumber])
+}
+
+model RoomEvent {
+  id           String        @id @default(uuid())
+  roomId       String
+  room         Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  actorId      String?
+  actor        User?         @relation("RoomEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUserId String?
+  type         RoomEventType
+  metadata     Json?
+  createdAt    DateTime      @default(now())
+
+  @@index([roomId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Private Messaging (الرسائل الخاصة)
+// ---------------------------------------------------------------------------
+
+model Conversation {
+  id        String   @id @default(uuid())
+  userAId   String
+  userA     User     @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String
+  userB     User     @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+  settings ConversationSetting[]
+
+  @@unique([userAId, userBId])
+}
+
+model ConversationSetting {
+  id                String       @id @default(uuid())
+  conversationId    String
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isPinned          Boolean      @default(false)
+  isMuted           Boolean      @default(false)
+  lastReadMessageId String?
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body            String
+  replyToId       String?
+  replyTo         Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[]    @relation("MessageReply")
+  forwardedFromId String?
+  isEdited        Boolean      @default(false)
+  isDeleted       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  readReceipts MessageReadReceipt[]
+  reports      MessageReport[]
+
+  @@index([conversationId, createdAt])
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlockerRelation", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlockedRelation", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model MessageReport {
+  id         String   @id @default(uuid())
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([messageId])
 }

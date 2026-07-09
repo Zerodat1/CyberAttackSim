@@ -6,6 +6,7 @@ import { ApplicationsPage } from "@/pages/ApplicationsPage";
 import { TopUpRequestsPage } from "@/pages/TopUpRequestsPage";
 import { WithdrawalRequestsPage } from "@/pages/WithdrawalRequestsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { RoomsPage } from "@/pages/RoomsPage";
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -54,6 +55,14 @@ export function App() {
         element={
           <ProtectedLayout>
             <SettingsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/rooms"
+        element={
+          <ProtectedLayout>
+            <RoomsPage />
           </ProtectedLayout>
         }
       />
