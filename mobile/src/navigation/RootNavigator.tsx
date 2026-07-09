@@ -66,7 +66,7 @@ function AppNavigator() {
         options={{ title: "طلب سحب" }}
       />
       <AppStack.Screen name="RoomsList" component={RoomsListScreen} options={{ title: "الغرف الصوتية" }} />
-      <AppStack.Screen name="Room" component={RoomScreen} options={{ title: "الغرفة" }} />
+      <AppStack.Screen name="Room" component={RoomScreen} options={{ headerShown: false }} />
       <AppStack.Screen
         name="ConversationsList"
         component={ConversationsListScreen}

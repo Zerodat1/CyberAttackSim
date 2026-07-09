@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Socket } from "socket.io-client";
 import { apiClient } from "@/api/client";
@@ -17,7 +20,7 @@ import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
 import { DiceGameModal } from "@/components/DiceGameModal";
 import { colors, radii, spacing } from "@/theme";
-import type { DiceGameRound, GiftSend, RoomDetail, RoomMemberRole, UserWallet } from "@/api/types";
+import type { DiceGameRound, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Room">;
@@ -35,14 +38,16 @@ const ROLE_LABEL: Record<RoomMemberRole, string> = {
   MEMBER: "عضو",
 };
 
-export function RoomScreen({ route }: Props) {
+export function RoomScreen({ route, navigation }: Props) {
   const { roomId } = route.params;
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
   const [joined, setJoined] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
+  const [membersModalVisible, setMembersModalVisible] = useState(false);
   const [feed, setFeed] = useState<FeedItem[]>([]);
 
   const { data: room, isLoading } = useQuery({
@@ -115,93 +120,152 @@ export function RoomScreen({ route }: Props) {
   }
 
   const mySeat = room.seats.find((s) => s.occupantId === user?.id);
+  const sortedSeats = [...room.seats].sort((a, b) => a.seatNumber - b.seatNumber);
+  const vipSeats = sortedSeats.slice(0, 4);
+  const restSeats = sortedSeats.slice(4);
+  const visibleMembers = room.members.slice(0, 5);
+  const extraMemberCount = room.members.length - visibleMembers.length;
+
+  function renderSeat(seat: RoomSeat, isVip: boolean) {
+    const isOwnerSeat = isVip && seat.seatNumber === 1 && !!seat.occupant;
+    return (
+      <View key={seat.id} style={styles.seatWrapper}>
+        {isOwnerSeat && <Text style={styles.crown}>👑</Text>}
+        <TouchableOpacity
+          disabled={!joined || !!seat.occupantId || seat.isLocked}
+          style={[
+            styles.seatCircle,
+            isVip && styles.seatCircleVip,
+            seat.occupantId && (isOwnerSeat ? styles.seatCircleOwner : styles.seatCircleOccupied),
+            seat.isLocked && styles.seatCircleLocked,
+          ]}
+          onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
+        >
+          {seat.occupant ? (
+            <Avatar name={seat.occupant.username} size={isVip ? 60 : 52} />
+          ) : (
+            <Text style={styles.seatIcon}>{seat.isLocked ? "🔒" : "🛋️"}</Text>
+          )}
+          {seat.isMuted && seat.occupantId && (
+            <View style={styles.mutedBadge}>
+              <Text style={styles.mutedIcon}>🔇</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <Text style={styles.seatLabel} numberOfLines={1}>
+          {seat.isLocked ? "مقفل" : seat.occupant ? seat.occupant.username : `شاغر ${seat.seatNumber}`}
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{room.name}</Text>
-      {wallet && (
-        <Text style={styles.walletText}>
-          رصيدك: {wallet.goldBalance} 💰 · {wallet.diamondBalance} 💎
-        </Text>
-      )}
+    <View style={styles.screen}>
+      <LinearGradient colors={["#3a1f6e", "#1a1438", "#0a0a1a"]} style={StyleSheet.absoluteFill} />
+      <View style={styles.glowTop} />
+      <View style={styles.glowBottom} />
 
-      {!joined && (
-        <TouchableOpacity style={styles.button} onPress={() => joinMutation.mutate()}>
-          <Text style={styles.buttonText}>الانضمام إلى الغرفة</Text>
+      <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.iconButtonText}>‹</Text>
         </TouchableOpacity>
-      )}
-
-      <View style={styles.seatsGrid}>
-        {room.seats.map((seat) => (
-          <View key={seat.id} style={styles.seatWrapper}>
-            <TouchableOpacity
-              disabled={!joined || !!seat.occupantId || seat.isLocked}
-              style={[
-                styles.seatCircle,
-                seat.occupantId && styles.seatCircleOccupied,
-                seat.isLocked && styles.seatCircleLocked,
-              ]}
-              onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
-            >
-              {seat.occupant ? (
-                <Avatar name={seat.occupant.username} size={56} />
-              ) : (
-                <Text style={styles.seatIcon}>{seat.isLocked ? "🔒" : seat.seatNumber}</Text>
-              )}
-              {seat.isMuted && seat.occupantId && (
-                <View style={styles.mutedBadge}>
-                  <Text style={styles.mutedIcon}>🔇</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <Text style={styles.seatLabel} numberOfLines={1}>
-              {seat.isLocked ? "مقفل" : seat.occupant ? seat.occupant.username : "شاغر"}
-            </Text>
+        <View style={styles.roomIdentity}>
+          <Text style={styles.roomName} numberOfLines={1}>
+            {room.name}
+          </Text>
+          <Text style={styles.roomId}>ID: {room.id.slice(0, 8)}</Text>
+        </View>
+        {wallet && (
+          <View style={styles.walletPill}>
+            <Text style={styles.walletPillText}>{wallet.goldBalance} 💰</Text>
           </View>
-        ))}
+        )}
       </View>
 
-      {mySeat && (
-        <TouchableOpacity style={styles.buttonSecondary} onPress={() => leaveSeatMutation.mutate()}>
-          <Text style={styles.buttonText}>مغادرة المايك</Text>
+      <Text style={styles.watermark} numberOfLines={1}>
+        {room.name}
+      </Text>
+
+      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <View style={styles.seatsRow}>{vipSeats.map((seat) => renderSeat(seat, true))}</View>
+        {restSeats.length > 0 && <View style={styles.seatsRow}>{restSeats.map((seat) => renderSeat(seat, false))}</View>}
+
+        <TouchableOpacity style={styles.membersStrip} onPress={() => setMembersModalVisible(true)}>
+          <View style={styles.membersAvatars}>
+            {visibleMembers.map((member, index) => (
+              <View key={member.id} style={[styles.memberAvatarOverlap, { marginStart: index === 0 ? 0 : -12 }]}>
+                <Avatar name={member.user.username} imageUrl={member.user.avatarUrl} size={28} />
+              </View>
+            ))}
+            {extraMemberCount > 0 && (
+              <View style={[styles.memberAvatarOverlap, styles.memberExtraBubble, { marginStart: -12 }]}>
+                <Text style={styles.memberExtraText}>+{extraMemberCount}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.membersCount}>الأعضاء ({room.members.length})</Text>
         </TouchableOpacity>
-      )}
 
-      {joined && (
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => setGiftModalVisible(true)}>
-            <Text style={styles.buttonText}>🎁 إرسال هدية</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => setGameModalVisible(true)}>
-            <Text style={styles.buttonText}>🎲 لعبة الرهان</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {feed.length > 0 && (
-        <View style={styles.feedBox}>
-          <Text style={styles.sectionTitle}>النشاط المباشر</Text>
-          {feed.map((item) => (
-            <Text key={item.id} style={styles.feedItem}>
-              {item.text}
-            </Text>
-          ))}
-        </View>
-      )}
-
-      <Text style={styles.sectionTitle}>الأعضاء ({room.members.length})</Text>
-      {room.members.map((member) => (
-        <View key={member.id} style={styles.memberRow}>
-          <View style={styles.memberRoleBadge}>
-            <Text style={styles.memberRole}>{ROLE_LABEL[member.role]}</Text>
+        {feed.length > 0 && (
+          <View style={styles.feedBox}>
+            {feed.slice(0, 5).map((item) => (
+              <View key={item.id} style={styles.feedBubble}>
+                <Text style={styles.feedText}>{item.text}</Text>
+              </View>
+            ))}
           </View>
-          <View style={styles.memberInfo}>
-            <Text style={styles.memberName}>{member.user.fullName}</Text>
-            <Text style={styles.memberUsername}>@{member.user.username}</Text>
+        )}
+      </ScrollView>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+        {!joined ? (
+          <TouchableOpacity style={styles.joinButton} onPress={() => joinMutation.mutate()}>
+            <Text style={styles.joinButtonText}>الانضمام إلى الغرفة</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.bottomIconButton} onPress={() => setGiftModalVisible(true)}>
+              <Text style={styles.bottomIconText}>🎁</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomIconButton} onPress={() => setGameModalVisible(true)}>
+              <Text style={styles.bottomIconText}>🎲</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomIconButton} onPress={() => setMembersModalVisible(true)}>
+              <Text style={styles.bottomIconText}>👥</Text>
+            </TouchableOpacity>
+            {mySeat && (
+              <TouchableOpacity style={styles.leaveSeatButton} onPress={() => leaveSeatMutation.mutate()}>
+                <Text style={styles.joinButtonText}>مغادرة المايك</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+      </View>
+
+      <Modal visible={membersModalVisible} transparent animationType="slide" onRequestClose={() => setMembersModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>الأعضاء ({room.members.length})</Text>
+            <ScrollView>
+              {room.members.map((member) => (
+                <View key={member.id} style={styles.memberRow}>
+                  <View style={styles.memberRoleBadge}>
+                    <Text style={styles.memberRole}>{ROLE_LABEL[member.role]}</Text>
+                  </View>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>{member.user.fullName}</Text>
+                    <Text style={styles.memberUsername}>@{member.user.username}</Text>
+                  </View>
+                  <Avatar name={member.user.username} imageUrl={member.user.avatarUrl} size={36} />
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setMembersModalVisible(false)}>
+              <Text style={styles.joinButtonText}>إغلاق</Text>
+            </TouchableOpacity>
           </View>
-          <Avatar name={member.user.username} size={36} />
         </View>
-      ))}
+      </Modal>
 
       <GiftModal
         visible={giftModalVisible}
@@ -211,31 +275,84 @@ export function RoomScreen({ route }: Props) {
         onClose={() => setGiftModalVisible(false)}
       />
       <DiceGameModal visible={gameModalVisible} roomId={roomId} onClose={() => setGameModalVisible(false)} />
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
-  title: { fontSize: 22, fontWeight: "700", color: colors.textPrimary, textAlign: "right" },
-  walletText: { color: colors.gold, textAlign: "right", marginBottom: spacing.lg, fontSize: 13, fontWeight: "600" },
-  seatsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
-  seatWrapper: { width: "23%", alignItems: "center", marginBottom: spacing.lg },
+  glowTop: {
+    position: "absolute",
+    top: -80,
+    right: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "rgba(124, 108, 249, 0.25)",
+  },
+  glowBottom: {
+    position: "absolute",
+    bottom: -100,
+    left: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(245, 196, 81, 0.08)",
+  },
+  topBar: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconButtonText: { color: "#fff", fontSize: 26, fontWeight: "300", lineHeight: 26 },
+  roomIdentity: { flex: 1, marginHorizontal: spacing.md, alignItems: "flex-end" },
+  roomName: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  roomId: { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 2 },
+  walletPill: {
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  walletPillText: { color: colors.gold, fontSize: 12, fontWeight: "700" },
+  watermark: {
+    position: "absolute",
+    top: "30%",
+    alignSelf: "center",
+    color: "rgba(255,255,255,0.05)",
+    fontSize: 40,
+    fontWeight: "900",
+  },
+  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
+  seatsRow: { flexDirection: "row-reverse", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
+  seatWrapper: { width: "23%", alignItems: "center", marginBottom: spacing.md },
+  crown: { fontSize: 16, marginBottom: -6, zIndex: 1 },
   seatCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(255,255,255,0.06)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  seatCircleOccupied: { backgroundColor: colors.surfaceMuted, borderColor: colors.primary },
-  seatCircleLocked: { backgroundColor: colors.surfaceAlt, borderColor: "transparent" },
-  seatIcon: { color: colors.textMuted, fontSize: 16, fontWeight: "700" },
-  seatLabel: { color: colors.textPrimary, fontSize: 11, marginTop: spacing.xs, textAlign: "center", maxWidth: "100%" },
+  seatCircleVip: { width: 68, height: 68, borderRadius: 34 },
+  seatCircleOccupied: { backgroundColor: "rgba(91,76,245,0.2)", borderColor: colors.primaryLight },
+  seatCircleOwner: { backgroundColor: "rgba(245,196,81,0.15)", borderColor: colors.gold, borderWidth: 3 },
+  seatCircleLocked: { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "transparent" },
+  seatIcon: { fontSize: 20 },
+  seatLabel: { color: "#e4e6ff", fontSize: 11, marginTop: spacing.xs, textAlign: "center", maxWidth: "100%" },
   mutedBadge: {
     position: "absolute",
     bottom: -2,
@@ -250,15 +367,92 @@ const styles = StyleSheet.create({
     borderColor: colors.background,
   },
   mutedIcon: { fontSize: 11 },
-  actionsRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.lg },
-  actionButton: { flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
-  feedBox: { backgroundColor: colors.surfaceAlt, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.lg },
-  feedItem: { color: "#c9cdf2", fontSize: 12, textAlign: "right", marginBottom: spacing.xs },
-  sectionTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right", marginVertical: spacing.md },
+  membersStrip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    marginBottom: spacing.lg,
+  },
+  membersAvatars: { flexDirection: "row-reverse", alignItems: "center", marginStart: spacing.sm },
+  memberAvatarOverlap: { borderWidth: 2, borderColor: "#1a1438", borderRadius: 16 },
+  memberExtraBubble: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberExtraText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+  membersCount: { color: "#e4e6ff", fontSize: 12, fontWeight: "600" },
+  feedBox: { marginTop: spacing.sm },
+  feedBubble: {
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.xs,
+    alignSelf: "flex-end",
+    maxWidth: "100%",
+  },
+  feedText: { color: "#e4e6ff", fontSize: 12, textAlign: "right" },
+  bottomBar: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  bottomIconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bottomIconText: { fontSize: 22 },
+  joinButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: radii.pill,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  leaveSeatButton: {
+    flex: 1,
+    backgroundColor: colors.danger,
+    borderRadius: radii.pill,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  joinButtonText: { color: "#fff", fontWeight: "700" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.xl,
+    maxHeight: "70%",
+  },
+  modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right", marginBottom: spacing.md },
+  modalCloseButton: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.md,
+  },
   memberRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radii.sm,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -273,13 +467,4 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   memberRole: { color: colors.primaryLight, fontSize: 11, fontWeight: "700" },
-  button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", marginBottom: spacing.lg },
-  buttonSecondary: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  buttonText: { color: "#fff", fontWeight: "700" },
 });
