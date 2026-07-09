@@ -20,7 +20,7 @@ import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
 import { GamesHubModal } from "@/components/GamesHubModal";
 import { RoomSettingsModal } from "@/components/RoomSettingsModal";
-import { colors, radii, spacing } from "@/theme";
+import { colorForName, colors, radii, spacing } from "@/theme";
 import type { GameRound, GameType, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
@@ -44,6 +44,7 @@ type Props = NativeStackScreenProps<AppStackParamList, "Room">;
 interface FeedItem {
   id: string;
   text: string;
+  kind: "gift" | "game";
 }
 
 const ROLE_LABEL: Record<RoomMemberRole, string> = {
@@ -53,6 +54,14 @@ const ROLE_LABEL: Record<RoomMemberRole, string> = {
   MODERATOR: "منسّق",
   MEMBER: "عضو",
 };
+
+function hexToRgba(hex: string, alpha: number): string {
+  const value = hex.replace("#", "");
+  const r = parseInt(value.substring(0, 2), 16);
+  const g = parseInt(value.substring(2, 4), 16);
+  const b = parseInt(value.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export function RoomScreen({ route, navigation }: Props) {
   const { roomId } = route.params;
@@ -120,7 +129,7 @@ export function RoomScreen({ route, navigation }: Props) {
         const label = giftSend.isLucky
           ? `🎰 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username} (مضاعف x${giftSend.luckyMultiplier})`
           : `🎁 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username}`;
-        setFeed((prev) => [{ id: giftSend.id, text: label }, ...prev].slice(0, 20));
+        setFeed((prev) => [{ id: giftSend.id, text: label, kind: "gift" as const }, ...prev].slice(0, 20));
       });
       s.on("room:game_round", (round: GameRound) => {
         if (deafenedRef.current) return;
@@ -128,7 +137,7 @@ export function RoomScreen({ route, navigation }: Props) {
         const label = round.isWin
           ? `${icon} لاعب راهن ${round.betAmount} وربح ${round.payout}`
           : `${icon} لاعب راهن ${round.betAmount} وخسر`;
-        setFeed((prev) => [{ id: round.id, text: label }, ...prev].slice(0, 20));
+        setFeed((prev) => [{ id: round.id, text: label, kind: "game" as const }, ...prev].slice(0, 20));
       });
     });
     return () => {
@@ -151,6 +160,7 @@ export function RoomScreen({ route, navigation }: Props) {
     );
   }
 
+  const accentColor = colorForName(room.name);
   const mySeat = room.seats.find((s) => s.occupantId === user?.id);
   const myMembership = room.members.find((m) => m.userId === user?.id);
   const canManageRoom = myMembership ? ROOM_ROLE_RANK[myMembership.role] >= ROOM_ROLE_RANK.ADMIN : false;
@@ -196,7 +206,7 @@ export function RoomScreen({ route, navigation }: Props) {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={["#3a1f6e", "#1a1438", "#0a0a1a"]} style={StyleSheet.absoluteFill} />
-      <View style={styles.glowTop} />
+      <View style={[styles.glowTop, { backgroundColor: hexToRgba(accentColor, 0.28) }]} />
       <View style={styles.glowBottom} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
@@ -212,6 +222,8 @@ export function RoomScreen({ route, navigation }: Props) {
         {wallet && (
           <View style={styles.walletPill}>
             <Text style={styles.walletPillText}>{wallet.goldBalance} 💰</Text>
+            <Text style={styles.walletPillDivider}>·</Text>
+            <Text style={[styles.walletPillText, { color: colors.diamond }]}>{wallet.diamondBalance} 💎</Text>
           </View>
         )}
         {canManageRoom && (
@@ -226,8 +238,11 @@ export function RoomScreen({ route, navigation }: Props) {
       </Text>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <View style={styles.seatsRow}>{vipSeats.map((seat) => renderSeat(seat, true))}</View>
-        {restSeats.length > 0 && <View style={styles.seatsRow}>{restSeats.map((seat) => renderSeat(seat, false))}</View>}
+        <View style={[styles.stagePanel, { borderColor: hexToRgba(accentColor, 0.25) }]}>
+          <View style={[styles.stageGlow, { backgroundColor: hexToRgba(accentColor, 0.14) }]} />
+          <View style={styles.seatsRow}>{vipSeats.map((seat) => renderSeat(seat, true))}</View>
+          {restSeats.length > 0 && <View style={styles.seatsRow}>{restSeats.map((seat) => renderSeat(seat, false))}</View>}
+        </View>
 
         <TouchableOpacity style={styles.membersStrip} onPress={() => setMembersModalVisible(true)}>
           <View style={styles.membersAvatars}>
@@ -248,7 +263,13 @@ export function RoomScreen({ route, navigation }: Props) {
         {feed.length > 0 && (
           <View style={styles.feedBox}>
             {feed.slice(0, 5).map((item) => (
-              <View key={item.id} style={styles.feedBubble}>
+              <View
+                key={item.id}
+                style={[
+                  styles.feedBubble,
+                  { borderStartColor: item.kind === "gift" ? colors.gold : colors.primaryLight },
+                ]}
+              >
                 <Text style={styles.feedText}>{item.text}</Text>
               </View>
             ))}
@@ -379,21 +400,45 @@ const styles = StyleSheet.create({
   roomName: { color: "#fff", fontSize: 16, fontWeight: "800" },
   roomId: { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 2 },
   walletPill: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.35)",
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
+    gap: 6,
   },
   walletPillText: { color: colors.gold, fontSize: 12, fontWeight: "700" },
+  walletPillDivider: { color: "rgba(255,255,255,0.3)", fontSize: 12 },
   watermark: {
     position: "absolute",
     top: "30%",
     alignSelf: "center",
-    color: "rgba(255,255,255,0.05)",
-    fontSize: 40,
+    color: "rgba(255,255,255,0.06)",
+    fontSize: 42,
     fontWeight: "900",
+    letterSpacing: 4,
+    textShadowColor: "rgba(255,255,255,0.08)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
   body: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
+  stagePanel: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    overflow: "hidden",
+  },
+  stageGlow: {
+    position: "absolute",
+    top: -40,
+    alignSelf: "center",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+  },
   seatsRow: { flexDirection: "row-reverse", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
   seatWrapper: { width: "23%", alignItems: "center", marginBottom: spacing.md },
   crown: { fontSize: 16, marginBottom: -6, zIndex: 1 },
@@ -433,6 +478,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     backgroundColor: "rgba(0,0,0,0.3)",
     borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     marginBottom: spacing.lg,
@@ -453,6 +500,7 @@ const styles = StyleSheet.create({
   feedBubble: {
     backgroundColor: "rgba(0,0,0,0.35)",
     borderRadius: radii.md,
+    borderStartWidth: 3,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.xs,
@@ -467,13 +515,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.06)",
   },
   bottomIconButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
