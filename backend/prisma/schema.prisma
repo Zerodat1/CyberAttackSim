@@ -87,6 +87,9 @@ enum GiftType {
 
 enum GameType {
   DICE_GUESS
+  LUCKY_WHEEL
+  SLOT_MACHINE
+  CRASH_GUESS
 }
 
 enum RoomMemberRole {
@@ -615,10 +618,11 @@ model GameRound {
 }
 
 model GameSettings {
-  id            String   @id @default("dice_guess")
+  id            String   @id
   minBet        Decimal  @default(10) @db.Decimal(14, 2)
   maxBet        Decimal  @default(5000) @db.Decimal(14, 2)
   winMultiplier Decimal  @default(9.0) @db.Decimal(6, 2)
   dailyBetLimit Decimal  @default(20000) @db.Decimal(14, 2)
+  config        Json?
   updatedAt     DateTime @updatedAt
 }

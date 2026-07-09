@@ -18,10 +18,17 @@ import { createSocket } from "@/api/socket";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
-import { DiceGameModal } from "@/components/DiceGameModal";
+import { GamesHubModal } from "@/components/GamesHubModal";
 import { colors, radii, spacing } from "@/theme";
-import type { DiceGameRound, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
+import type { GameRound, GameType, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
+
+const GAME_ICON: Record<GameType, string> = {
+  DICE_GUESS: "🎲",
+  LUCKY_WHEEL: "🎡",
+  SLOT_MACHINE: "🎰",
+  CRASH_GUESS: "🚀",
+};
 
 type Props = NativeStackScreenProps<AppStackParamList, "Room">;
 
@@ -92,10 +99,11 @@ export function RoomScreen({ route, navigation }: Props) {
           : `🎁 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username}`;
         setFeed((prev) => [{ id: giftSend.id, text: label }, ...prev].slice(0, 20));
       });
-      s.on("room:game_round", (round: DiceGameRound) => {
+      s.on("room:game_round", (round: GameRound) => {
+        const icon = GAME_ICON[round.gameType] ?? "🎮";
         const label = round.isWin
-          ? `🎲 لاعب راهن ${round.betAmount} وربح ${round.payout} (الرقم ${round.rolledNumber})`
-          : `🎲 لاعب راهن ${round.betAmount} وخسر (الرقم ${round.rolledNumber})`;
+          ? `${icon} لاعب راهن ${round.betAmount} وربح ${round.payout}`
+          : `${icon} لاعب راهن ${round.betAmount} وخسر`;
         setFeed((prev) => [{ id: round.id, text: label }, ...prev].slice(0, 20));
       });
     });
@@ -274,7 +282,7 @@ export function RoomScreen({ route, navigation }: Props) {
         currentUserId={user?.id}
         onClose={() => setGiftModalVisible(false)}
       />
-      <DiceGameModal visible={gameModalVisible} roomId={roomId} onClose={() => setGameModalVisible(false)} />
+      <GamesHubModal visible={gameModalVisible} roomId={roomId} onClose={() => setGameModalVisible(false)} />
     </View>
   );
 }

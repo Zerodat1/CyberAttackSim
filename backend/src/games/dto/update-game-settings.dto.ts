@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNumber, IsOptional, Min } from "class-validator";
+import { IsNumber, IsObject, IsOptional, Min } from "class-validator";
 
 export class UpdateGameSettingsDto {
   @ApiPropertyOptional()
@@ -25,4 +25,9 @@ export class UpdateGameSettingsDto {
   @IsNumber()
   @Min(0)
   dailyBetLimit?: number;
+
+  @ApiPropertyOptional({ description: "Game-specific config, e.g. wheel segments or crash house edge" })
+  @IsOptional()
+  @IsObject()
+  config?: Record<string, unknown>;
 }

@@ -151,6 +151,8 @@ export interface GiftSend {
   gift: Gift;
 }
 
+export type GameType = "DICE_GUESS" | "LUCKY_WHEEL" | "SLOT_MACHINE" | "CRASH_GUESS";
+
 export interface DiceGameSettings {
   minBet: string;
   maxBet: string;
@@ -172,5 +174,51 @@ export interface DiceGameRound {
 
 export interface PlayDiceResult {
   round: DiceGameRound;
+  goldBalance: number;
+}
+
+export interface WeightedTier {
+  label: string;
+  multiplier: number;
+  weight: number;
+}
+
+export interface WheelGameSettings {
+  minBet: string;
+  maxBet: string;
+  dailyBetLimit: string;
+  config: { segments: WeightedTier[] };
+}
+
+export interface SlotsGameSettings {
+  minBet: string;
+  maxBet: string;
+  dailyBetLimit: string;
+  config: { tiers: WeightedTier[] };
+}
+
+export interface CrashGameSettings {
+  minBet: string;
+  maxBet: string;
+  dailyBetLimit: string;
+  config: { houseEdge: number; maxMultiplier: number };
+}
+
+export interface GameRound {
+  id: string;
+  gameType: GameType;
+  playerId: string;
+  roomId: string | null;
+  betAmount: string;
+  choice: number;
+  rolledNumber: number;
+  multiplier: string;
+  payout: string;
+  isWin: boolean;
+  createdAt: string;
+}
+
+export interface PlayGameResult {
+  round: GameRound;
   goldBalance: number;
 }
