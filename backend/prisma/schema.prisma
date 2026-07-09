@@ -171,6 +171,9 @@ model User {
   giftsReceived GiftSend[]  @relation("GiftRecipient")
   gameRounds    GameRound[]
 
+  ownedHostAgencies    HostAgency[]       @relation("HostAgencyOwner")
+  hostAgencyMembership HostAgencyMember?
+
   @@index([globalRole])
 }
 
@@ -626,4 +629,36 @@ model GameSettings {
   winRatePercent Decimal  @default(50) @db.Decimal(5, 2)
   config         Json?
   updatedAt      DateTime @updatedAt
+}
+
+enum HostAgencyRole {
+  OWNER
+  HOST
+}
+
+model HostAgency {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User     @relation("HostAgencyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members HostAgencyMember[]
+
+  @@index([isActive])
+}
+
+model HostAgencyMember {
+  id       String         @id @default(uuid())
+  agencyId String
+  agency   HostAgency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId   String         @unique
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     HostAgencyRole @default(HOST)
+  joinedAt DateTime       @default(now())
+
+  @@index([agencyId])
 }

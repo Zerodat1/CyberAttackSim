@@ -222,3 +222,43 @@ export interface PlayGameResult {
   round: GameRound;
   goldBalance: number;
 }
+
+export type HostAgencyRole = "OWNER" | "HOST";
+
+interface HostAgencyUserRef {
+  id: string;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+}
+
+export interface HostAgencySummary {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  owner: HostAgencyUserRef;
+  _count: { members: number };
+}
+
+export interface HostAgencyMember {
+  id: string;
+  userId: string;
+  role: HostAgencyRole;
+  joinedAt: string;
+  user: HostAgencyUserRef;
+}
+
+export interface HostAgencyDetail extends HostAgencySummary {
+  members: HostAgencyMember[];
+}
+
+export interface HostAgencyMembership {
+  id: string;
+  agencyId: string;
+  userId: string;
+  role: HostAgencyRole;
+  joinedAt: string;
+  agency: HostAgencySummary;
+}

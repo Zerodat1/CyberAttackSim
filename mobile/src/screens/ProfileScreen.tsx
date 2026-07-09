@@ -16,7 +16,7 @@ import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { colors, radii, spacing, typography } from "@/theme";
-import type { UserProfile } from "@/api/types";
+import type { HostAgencyMembership, UserProfile } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Profile">;
@@ -53,6 +53,11 @@ export function ProfileScreen({ navigation }: Props) {
   const { data: wallet } = useQuery({
     queryKey: ["wallet"],
     queryFn: async () => (await apiClient.get<{ goldBalance: string; diamondBalance: string }>("/wallet/me")).data,
+  });
+
+  const { data: agencyMembership } = useQuery({
+    queryKey: ["my-host-agency"],
+    queryFn: async () => (await apiClient.get<HostAgencyMembership | null>("/host-agencies/me")).data,
   });
 
   useEffect(() => {
@@ -133,6 +138,19 @@ export function ProfileScreen({ navigation }: Props) {
             </View>
           </LinearGradient>
         )}
+
+        <TouchableOpacity style={styles.agencyCard} onPress={() => navigation.navigate("HostAgencies")}>
+          <Text style={styles.agencyChevron}>›</Text>
+          <View style={styles.agencyInfo}>
+            <Text style={styles.agencyLabel}>{agencyMembership ? agencyMembership.agency.name : "لست عضوًا في أي وكالة"}</Text>
+            <Text style={styles.agencySubtitle}>
+              {agencyMembership
+                ? `${agencyMembership.role === "OWNER" ? "المالك" : "مضيف"} · 👥 ${agencyMembership.agency._count.members}`
+                : "انضم إلى وكالة مضيفين أو أنشئ وكالتك الخاصة"}
+            </Text>
+          </View>
+          <Text style={styles.agencyIcon}>🏢</Text>
+        </TouchableOpacity>
 
         <View style={styles.menuGrid}>
           {MENU_ITEMS.map((item) => (
@@ -301,6 +319,19 @@ const styles = StyleSheet.create({
   walletDivider: { width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.08)" },
   walletValue: { color: colors.gold, fontSize: 20, fontWeight: "800" },
   walletLabel: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  agencyCard: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  agencyIcon: { fontSize: 24 },
+  agencyInfo: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
+  agencyLabel: { color: colors.textPrimary, fontWeight: "700", fontSize: 14, textAlign: "right" },
+  agencySubtitle: { color: colors.textSecondary, fontSize: 11, marginTop: 2, textAlign: "right" },
+  agencyChevron: { color: colors.textMuted, fontSize: 20, transform: [{ scaleX: -1 }] },
   menuGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginBottom: spacing.xl },
   menuItem: {
     width: "47%",

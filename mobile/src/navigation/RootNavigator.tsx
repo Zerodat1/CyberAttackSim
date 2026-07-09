@@ -16,6 +16,8 @@ import { ChatScreen } from "@/screens/ChatScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
 import { GiftHistoryScreen } from "@/screens/GiftHistoryScreen";
 import { GameHistoryScreen } from "@/screens/GameHistoryScreen";
+import { HostAgenciesScreen } from "@/screens/HostAgenciesScreen";
+import { HostAgencyDetailScreen } from "@/screens/HostAgencyDetailScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -35,6 +37,8 @@ export type AppStackParamList = {
   Profile: undefined;
   GiftHistory: undefined;
   GameHistory: undefined;
+  HostAgencies: undefined;
+  HostAgencyDetail: { agencyId: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -80,6 +84,8 @@ function AppNavigator() {
       <AppStack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="GiftHistory" component={GiftHistoryScreen} options={{ title: "سجل الهدايا" }} />
       <AppStack.Screen name="GameHistory" component={GameHistoryScreen} options={{ title: "سجل الألعاب" }} />
+      <AppStack.Screen name="HostAgencies" component={HostAgenciesScreen} options={{ title: "وكالات المضيفين" }} />
+      <AppStack.Screen name="HostAgencyDetail" component={HostAgencyDetailScreen} options={{ title: "الوكالة" }} />
     </AppStack.Navigator>
   );
 }

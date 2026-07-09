@@ -15,6 +15,7 @@ import { MessagingModule } from "./messaging/messaging.module";
 import { WalletModule } from "./wallet/wallet.module";
 import { GiftsModule } from "./gifts/gifts.module";
 import { GamesModule } from "./games/games.module";
+import { HostAgenciesModule } from "./host-agencies/host-agencies.module";
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { GamesModule } from "./games/games.module";
     WalletModule,
     GiftsModule,
     GamesModule,
+    HostAgenciesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
