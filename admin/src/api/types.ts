@@ -90,6 +90,7 @@ export interface GameSettings {
   maxBet: string;
   winMultiplier: string;
   dailyBetLimit: string;
+  config: Record<string, unknown> | null;
 }
 
 export interface RoomSummary {

@@ -19,6 +19,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import TuneIcon from "@mui/icons-material/Tune";
 import MicIcon from "@mui/icons-material/Mic";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
+import CasinoIcon from "@mui/icons-material/Casino";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/auth/AuthContext";
 
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { to: "/withdrawals", label: "طلبات السحب", icon: <PaymentsIcon /> },
   { to: "/rooms", label: "الغرف الصوتية", icon: <MicIcon /> },
   { to: "/gifts", label: "كتالوج الهدايا", icon: <CardGiftcardIcon /> },
+  { to: "/games", label: "ألعاب الرهان", icon: <CasinoIcon /> },
   { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon /> },
 ];
 
