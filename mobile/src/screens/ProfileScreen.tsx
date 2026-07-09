@@ -9,11 +9,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Clipboard from "expo-clipboard";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { colors, radii, spacing, typography } from "@/theme";
 import type { UserProfile } from "@/api/types";
+import type { AppStackParamList } from "@/navigation/RootNavigator";
+
+type Props = NativeStackScreenProps<AppStackParamList, "Profile">;
 
 const ROLE_LABEL: Record<string, string> = {
   USER: "مستخدم",
@@ -21,19 +27,32 @@ const ROLE_LABEL: Record<string, string> = {
   OWNER: "المالك",
 };
 
-export function ProfileScreen() {
+const MENU_ITEMS = [
+  { icon: "🎙️", label: "الغرف الصوتية", screen: "RoomsList" as const },
+  { icon: "💬", label: "الرسائل", screen: "ConversationsList" as const },
+  { icon: "🎁", label: "سجل الهدايا", screen: "GiftHistory" as const },
+  { icon: "🎲", label: "سجل الألعاب", screen: "GameHistory" as const },
+];
+
+export function ProfileScreen({ navigation }: Props) {
   const queryClient = useQueryClient();
-  const { refreshUser } = useAuth();
+  const { refreshUser, logout } = useAuth();
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [country, setCountry] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => (await apiClient.get<UserProfile>("/users/me")).data,
+  });
+
+  const { data: wallet } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: async () => (await apiClient.get<{ goldBalance: string; diamondBalance: string }>("/wallet/me")).data,
   });
 
   useEffect(() => {
@@ -62,6 +81,13 @@ export function ProfileScreen() {
     onError: () => setError("تعذر حفظ التعديلات، تحقق من صحة البيانات (مثل رابط الصورة)"),
   });
 
+  async function copyId() {
+    if (!profile) return;
+    await Clipboard.setStringAsync(profile.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   if (isLoading || !profile) {
     return (
       <View style={styles.center}>
@@ -71,98 +97,144 @@ export function ProfileScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Avatar name={profile.fullName} imageUrl={editing ? avatarUrl : profile.avatarUrl} size={84} />
-        {!editing && (
+    <ScrollView style={styles.root} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <LinearGradient colors={[colors.primary, "#8a3ffb"]} style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>‹</Text>
+        </TouchableOpacity>
+
+        <View style={styles.avatarRing}>
+          <Avatar name={profile.fullName} imageUrl={editing ? avatarUrl : profile.avatarUrl} size={88} />
+        </View>
+        <Text style={styles.name}>{profile.fullName}</Text>
+        <Text style={styles.username}>@{profile.username}</Text>
+
+        <TouchableOpacity style={styles.idRow} onPress={copyId}>
+          <Text style={styles.idText}>ID: {profile.id.slice(0, 8)}</Text>
+          <Text style={styles.copyIcon}>{copied ? "✓" : "📋"}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleBadgeText}>{ROLE_LABEL[profile.globalRole] ?? profile.globalRole}</Text>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.body}>
+        {wallet && (
+          <LinearGradient colors={["#2a2c60", "#1c1e3a"]} style={styles.walletCard}>
+            <View style={styles.walletItem}>
+              <Text style={styles.walletValue}>{wallet.goldBalance}</Text>
+              <Text style={styles.walletLabel}>ذهب 💰</Text>
+            </View>
+            <View style={styles.walletDivider} />
+            <View style={styles.walletItem}>
+              <Text style={[styles.walletValue, { color: colors.diamond }]}>{wallet.diamondBalance}</Text>
+              <Text style={styles.walletLabel}>ألماس 💎</Text>
+            </View>
+          </LinearGradient>
+        )}
+
+        <View style={styles.menuGrid}>
+          {MENU_ITEMS.map((item) => (
+            <TouchableOpacity
+              key={item.screen}
+              style={styles.menuItem}
+              onPress={() => navigation.navigate(item.screen)}
+            >
+              <Text style={styles.menuIcon}>{item.icon}</Text>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {!editing ? (
           <>
-            <Text style={styles.name}>{profile.fullName}</Text>
-            <Text style={styles.username}>@{profile.username}</Text>
-            {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+            <View style={styles.card}>
+              {profile.bio ? (
+                <Text style={styles.bio}>{profile.bio}</Text>
+              ) : (
+                <Text style={styles.bioPlaceholder}>لم تُضِف نبذة تعريفية بعد</Text>
+              )}
+            </View>
+
+            <View style={styles.card}>
+              <InfoRow label="الدولة" value={profile.country ?? "غير محددة"} />
+              <InfoRow label="البريد الإلكتروني" value={profile.email ?? "—"} />
+              <InfoRow label="رقم الهاتف" value={profile.phone ?? "—"} />
+              <InfoRow label="المصادقة الثنائية" value={profile.twoFactorEnabled ? "مفعّلة" : "غير مفعّلة"} />
+              <InfoRow label="تاريخ الانضمام" value={new Date(profile.createdAt).toLocaleDateString("ar")} last />
+            </View>
+
+            <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
+              <Text style={styles.buttonText}>تعديل الملف الشخصي</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={() => logout()}>
+              <Text style={styles.logoutText}>تسجيل الخروج</Text>
+            </TouchableOpacity>
           </>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.fieldLabel}>الاسم الكامل</Text>
+            <TextInput style={styles.input} value={fullName} onChangeText={setFullName} />
+
+            <Text style={styles.fieldLabel}>نبذة تعريفية</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              value={bio}
+              onChangeText={setBio}
+              multiline
+              maxLength={160}
+              placeholder="اكتب نبذة قصيرة عن نفسك..."
+              placeholderTextColor={colors.textMuted}
+            />
+
+            <Text style={styles.fieldLabel}>الدولة</Text>
+            <TextInput style={styles.input} value={country} onChangeText={setCountry} />
+
+            <Text style={styles.fieldLabel}>رابط صورة الملف الشخصي</Text>
+            <TextInput
+              style={styles.input}
+              value={avatarUrl}
+              onChangeText={setAvatarUrl}
+              placeholder="https://..."
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+            />
+
+            {error && <Text style={styles.error}>{error}</Text>}
+
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[styles.button, { flex: 1 }]}
+                disabled={saveMutation.isPending}
+                onPress={() => saveMutation.mutate()}
+              >
+                {saveMutation.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>حفظ التغييرات</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.buttonSecondary, { flex: 1 }]}
+                onPress={() => {
+                  setEditing(false);
+                  setError(null);
+                }}
+              >
+                <Text style={styles.buttonText}>إلغاء</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       </View>
-
-      {!editing ? (
-        <>
-          <View style={styles.card}>
-            <InfoRow label="الدور" value={ROLE_LABEL[profile.globalRole] ?? profile.globalRole} />
-            <InfoRow label="الدولة" value={profile.country ?? "غير محددة"} />
-            <InfoRow label="البريد الإلكتروني" value={profile.email ?? "—"} />
-            <InfoRow label="رقم الهاتف" value={profile.phone ?? "—"} />
-            <InfoRow
-              label="المصادقة الثنائية"
-              value={profile.twoFactorEnabled ? "مفعّلة" : "غير مفعّلة"}
-            />
-            <InfoRow label="تاريخ الانضمام" value={new Date(profile.createdAt).toLocaleDateString("ar")} />
-          </View>
-
-          <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
-            <Text style={styles.buttonText}>تعديل الملف الشخصي</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <View style={styles.card}>
-          <Text style={styles.fieldLabel}>الاسم الكامل</Text>
-          <TextInput style={styles.input} value={fullName} onChangeText={setFullName} />
-
-          <Text style={styles.fieldLabel}>نبذة تعريفية</Text>
-          <TextInput
-            style={[styles.input, styles.inputMultiline]}
-            value={bio}
-            onChangeText={setBio}
-            multiline
-            maxLength={160}
-            placeholder="اكتب نبذة قصيرة عن نفسك..."
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <Text style={styles.fieldLabel}>الدولة</Text>
-          <TextInput style={styles.input} value={country} onChangeText={setCountry} />
-
-          <Text style={styles.fieldLabel}>رابط صورة الملف الشخصي</Text>
-          <TextInput
-            style={styles.input}
-            value={avatarUrl}
-            onChangeText={setAvatarUrl}
-            placeholder="https://..."
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-          />
-
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={[styles.button, { flex: 1 }]}
-              disabled={saveMutation.isPending}
-              onPress={() => saveMutation.mutate()}
-            >
-              {saveMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>حفظ التغييرات</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.buttonSecondary, { flex: 1 }]}
-              onPress={() => {
-                setEditing(false);
-                setError(null);
-              }}
-            >
-              <Text style={styles.buttonText}>إلغاء</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </ScrollView>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
-    <View style={rowStyles.row}>
+    <View style={[rowStyles.row, last && { borderBottomWidth: 0 }]}>
       <Text style={rowStyles.value}>{value}</Text>
       <Text style={rowStyles.label}>{label}</Text>
     </View>
@@ -182,13 +254,66 @@ const rowStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
-  header: { alignItems: "center", marginBottom: spacing.xl },
-  name: { ...typography.heading, color: colors.textPrimary, marginTop: spacing.md },
-  username: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
-  bio: { color: colors.textSecondary, fontSize: 13, marginTop: spacing.sm, textAlign: "center" },
+  header: { paddingTop: 56, paddingBottom: spacing.xxl, alignItems: "center" },
+  backButton: { position: "absolute", top: 52, left: spacing.lg, padding: spacing.xs },
+  backButtonText: { color: "#fff", fontSize: 32, fontWeight: "300", lineHeight: 32 },
+  avatarRing: {
+    padding: 4,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.6)",
+    marginBottom: spacing.md,
+  },
+  name: { ...typography.heading, color: "#fff", fontSize: 20 },
+  username: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 2 },
+  idRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    marginTop: spacing.md,
+  },
+  idText: { color: "#fff", fontSize: 12 },
+  copyIcon: { fontSize: 12 },
+  roleBadge: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    marginTop: spacing.sm,
+  },
+  roleBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  body: { padding: spacing.xl, marginTop: -spacing.lg },
+  walletCard: {
+    flexDirection: "row",
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  walletItem: { alignItems: "center", flex: 1 },
+  walletDivider: { width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.08)" },
+  walletValue: { color: colors.gold, fontSize: 20, fontWeight: "800" },
+  walletLabel: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  menuGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginBottom: spacing.xl },
+  menuItem: {
+    width: "47%",
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+  },
+  menuIcon: { fontSize: 26, marginBottom: 4 },
+  menuLabel: { color: colors.textPrimary, fontWeight: "700", fontSize: 13 },
   card: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.lg, marginBottom: spacing.xl },
+  bio: { color: colors.textPrimary, fontSize: 14, textAlign: "right", lineHeight: 20 },
+  bioPlaceholder: { color: colors.textMuted, fontSize: 13, textAlign: "right", fontStyle: "italic" },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, textAlign: "right", marginBottom: spacing.xs, marginTop: spacing.sm },
   input: {
     backgroundColor: colors.background,
@@ -203,5 +328,7 @@ const styles = StyleSheet.create({
   button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   buttonSecondary: { backgroundColor: colors.surfaceMuted, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   buttonText: { color: "#fff", fontWeight: "700" },
+  logoutButton: { alignItems: "center", paddingVertical: spacing.md, marginTop: spacing.sm },
+  logoutText: { color: colors.danger, fontWeight: "600" },
   error: { color: colors.danger, textAlign: "center", marginTop: spacing.sm },
 });

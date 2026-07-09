@@ -14,6 +14,8 @@ import { RoomScreen } from "@/screens/RoomScreen";
 import { ConversationsListScreen } from "@/screens/ConversationsListScreen";
 import { ChatScreen } from "@/screens/ChatScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
+import { GiftHistoryScreen } from "@/screens/GiftHistoryScreen";
+import { GameHistoryScreen } from "@/screens/GameHistoryScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -31,6 +33,8 @@ export type AppStackParamList = {
   ConversationsList: undefined;
   Chat: { conversationId: string; otherUserName: string };
   Profile: undefined;
+  GiftHistory: undefined;
+  GameHistory: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -73,7 +77,9 @@ function AppNavigator() {
         component={ChatScreen}
         options={({ route }) => ({ title: route.params.otherUserName })}
       />
-      <AppStack.Screen name="Profile" component={ProfileScreen} options={{ title: "الملف الشخصي" }} />
+      <AppStack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+      <AppStack.Screen name="GiftHistory" component={GiftHistoryScreen} options={{ title: "سجل الهدايا" }} />
+      <AppStack.Screen name="GameHistory" component={GameHistoryScreen} options={{ title: "سجل الألعاب" }} />
     </AppStack.Navigator>
   );
 }
