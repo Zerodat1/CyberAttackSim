@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import * as SecureStore from "expo-secure-store";
+import { secureStorage } from "@/api/storage";
 import { apiClient, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/api/client";
 import { AuthUser } from "@/api/types";
 
@@ -20,8 +20,8 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function storeSession(accessToken: string, refreshToken: string) {
-  await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
-  await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+  await secureStorage.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
+  await secureStorage.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function refreshUser() {
-    const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+    const token = await secureStorage.getItemAsync(ACCESS_TOKEN_KEY);
     if (!token) {
       setUser(null);
       return;
@@ -67,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiClient.post("/auth/logout");
     } finally {
-      await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      await secureStorage.deleteItemAsync(ACCESS_TOKEN_KEY);
+      await secureStorage.deleteItemAsync(REFRESH_TOKEN_KEY);
       setUser(null);
     }
   }
