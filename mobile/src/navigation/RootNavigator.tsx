@@ -56,7 +56,7 @@ function AuthNavigator() {
 function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerStyle: { backgroundColor: "#0f1020" }, headerTintColor: "#fff" }}>
-      <AppStack.Screen name="Home" component={HomeScreen} options={{ title: "الرئيسية" }} />
+      <AppStack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="ApplyAgency" component={ApplyAgencyScreen} options={{ title: "طلب فتح وكالة" }} />
       <AppStack.Screen
         name="AgentDashboard"
