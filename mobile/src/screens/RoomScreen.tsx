@@ -19,6 +19,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
 import { GamesHubModal } from "@/components/GamesHubModal";
+import { RoomSettingsModal } from "@/components/RoomSettingsModal";
 import { colors, radii, spacing } from "@/theme";
 import type { GameRound, GameType, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
@@ -28,6 +29,14 @@ const GAME_ICON: Record<GameType, string> = {
   LUCKY_WHEEL: "🎡",
   SLOT_MACHINE: "🎰",
   CRASH_GUESS: "🚀",
+};
+
+const ROOM_ROLE_RANK: Record<RoomMemberRole, number> = {
+  OWNER: 4,
+  CO_OWNER: 3,
+  ADMIN: 2,
+  MODERATOR: 1,
+  MEMBER: 0,
 };
 
 type Props = NativeStackScreenProps<AppStackParamList, "Room">;
@@ -55,6 +64,7 @@ export function RoomScreen({ route, navigation }: Props) {
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
   const [membersModalVisible, setMembersModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [deafened, setDeafened] = useState(false);
   const deafenedRef = useRef(false);
@@ -142,6 +152,8 @@ export function RoomScreen({ route, navigation }: Props) {
   }
 
   const mySeat = room.seats.find((s) => s.occupantId === user?.id);
+  const myMembership = room.members.find((m) => m.userId === user?.id);
+  const canManageRoom = myMembership ? ROOM_ROLE_RANK[myMembership.role] >= ROOM_ROLE_RANK.ADMIN : false;
   const sortedSeats = [...room.seats].sort((a, b) => a.seatNumber - b.seatNumber);
   const vipSeats = sortedSeats.slice(0, 4);
   const restSeats = sortedSeats.slice(4);
@@ -201,6 +213,11 @@ export function RoomScreen({ route, navigation }: Props) {
           <View style={styles.walletPill}>
             <Text style={styles.walletPillText}>{wallet.goldBalance} 💰</Text>
           </View>
+        )}
+        {canManageRoom && (
+          <TouchableOpacity style={styles.iconButton} onPress={() => setSettingsModalVisible(true)}>
+            <Text style={styles.iconButtonText}>⚙️</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -311,6 +328,13 @@ export function RoomScreen({ route, navigation }: Props) {
         onClose={() => setGiftModalVisible(false)}
       />
       <GamesHubModal visible={gameModalVisible} roomId={roomId} onClose={() => setGameModalVisible(false)} />
+      <RoomSettingsModal
+        visible={settingsModalVisible}
+        room={room}
+        isOwner={myMembership?.role === "OWNER"}
+        onClose={() => setSettingsModalVisible(false)}
+        navigation={navigation}
+      />
     </View>
   );
 }

@@ -9,6 +9,18 @@ import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "ConversationsList">;
 
+function relativeTime(isoDate: string): string {
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "الآن";
+  if (minutes < 60) return `قبل ${minutes} د`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `قبل ${hours} س`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `قبل ${days} يوم`;
+  return new Date(isoDate).toLocaleDateString("ar");
+}
+
 export function ConversationsListScreen({ navigation }: Props) {
   const { data: conversations, isLoading } = useQuery({
     queryKey: ["conversations"],
@@ -38,7 +50,11 @@ export function ConversationsListScreen({ navigation }: Props) {
           >
             <Avatar name={item.otherUser.fullName} size={46} />
             <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{item.otherUser.fullName}</Text>
+              <View style={styles.cardTitleRow}>
+                {item.isPinned && <Text style={styles.pinIcon}>📌</Text>}
+                {item.isMuted && <Text style={styles.muteIcon}>🔕</Text>}
+                <Text style={styles.cardTitle}>{item.otherUser.fullName}</Text>
+              </View>
               <Text style={styles.cardSubtitle} numberOfLines={1}>
                 {item.lastMessage
                   ? item.lastMessage.isDeleted
@@ -47,6 +63,7 @@ export function ConversationsListScreen({ navigation }: Props) {
                   : "لا توجد رسائل بعد"}
               </Text>
             </View>
+            <Text style={styles.timestamp}>{relativeTime(item.updatedAt)}</Text>
           </TouchableOpacity>
         )}
       />
@@ -68,6 +85,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardBody: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
+  cardTitleRow: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
   cardTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right" },
   cardSubtitle: { color: colors.textSecondary, fontSize: 13, marginTop: 4, textAlign: "right" },
+  pinIcon: { fontSize: 11 },
+  muteIcon: { fontSize: 11 },
+  timestamp: { color: colors.textMuted, fontSize: 11 },
 });

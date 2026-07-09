@@ -54,12 +54,20 @@ export function RoomsListScreen({ navigation }: Props) {
         contentContainerStyle={{ padding: spacing.lg }}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Room", { roomId: item.id })}>
-            <Avatar name={item.owner.fullName} size={44} />
+            <View style={styles.avatarWrap}>
+              <Avatar name={item.owner.fullName} size={44} />
+              {item.isPasswordProtected && (
+                <View style={styles.lockBadge}>
+                  <Text style={styles.lockBadgeText}>🔒</Text>
+                </View>
+              )}
+            </View>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.cardSubtitle}>
-                {item.owner.fullName} · {item._count.members} عضو {item.isPasswordProtected ? "· 🔒 مغلقة" : ""}
-              </Text>
+              <Text style={styles.cardSubtitle}>{item.owner.fullName}</Text>
+            </View>
+            <View style={styles.memberPill}>
+              <Text style={styles.memberPillText}>👥 {item._count.members}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -114,6 +122,28 @@ const styles = StyleSheet.create({
   cardBody: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
   cardTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right" },
   cardSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 4, textAlign: "right" },
+  avatarWrap: { position: "relative" },
+  lockBadge: {
+    position: "absolute",
+    bottom: -2,
+    left: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  lockBadgeText: { fontSize: 9 },
+  memberPill: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  memberPillText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700" },
   fab: {
     position: "absolute",
     bottom: spacing.xl,
