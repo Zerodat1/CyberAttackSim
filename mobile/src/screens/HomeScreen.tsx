@@ -24,14 +24,8 @@ export function HomeScreen({ navigation }: Props) {
 
   const { data: application, isLoading } = useQuery({
     queryKey: ["my-application"],
-    queryFn: async () => {
-      try {
-        const { data } = await apiClient.get<RechargeAgencyApplication>("/recharge-agency/applications/me");
-        return data;
-      } catch {
-        return null;
-      }
-    },
+    queryFn: async () =>
+      (await apiClient.get<RechargeAgencyApplication | null>("/recharge-agency/applications/me")).data,
   });
 
   const { data: wallet } = useQuery({

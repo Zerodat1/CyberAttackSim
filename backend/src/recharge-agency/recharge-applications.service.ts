@@ -52,13 +52,9 @@ export class RechargeApplicationsService {
   }
 
   async getMine(applicantId: string) {
-    const application = await this.prisma.rechargeAgencyApplication.findUnique({
+    return this.prisma.rechargeAgencyApplication.findUnique({
       where: { applicantId },
     });
-    if (!application) {
-      throw new NotFoundException("No recharge agency application found");
-    }
-    return application;
   }
 
   async list(status?: ApplicationStatus) {
