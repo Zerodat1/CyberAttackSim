@@ -9,6 +9,7 @@ export const colors = {
   diamond: "#7fd8e8",
   success: "#4cd964",
   danger: "#ff6b6b",
+  giftPink: "#ff3d9a",
   textPrimary: "#ffffff",
   textSecondary: "#aab0d8",
   textMuted: "#7c86c9",
