@@ -6,6 +6,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
+  setSession: (accessToken: string, user: AuthUser) => void;
   logout: () => void;
 }
 
@@ -43,6 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.data.user);
   }
 
+  function setSession(accessToken: string, sessionUser: AuthUser) {
+    localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+    setUser(sessionUser);
+  }
+
   function logout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
@@ -50,7 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, setSession, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

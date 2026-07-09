@@ -250,7 +250,7 @@ export class AuthService {
     }
   }
 
-  private async issueSession(userId: string, ctx: RequestContext) {
+  async issueSession(userId: string, ctx: RequestContext) {
     const rawRefreshToken = nanoid(48);
     const session = await this.prisma.session.create({
       data: {

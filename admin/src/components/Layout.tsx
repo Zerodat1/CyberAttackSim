@@ -20,21 +20,43 @@ import TuneIcon from "@mui/icons-material/Tune";
 import MicIcon from "@mui/icons-material/Mic";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import CasinoIcon from "@mui/icons-material/Casino";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/auth/AuthContext";
+import { GlobalRole } from "@/api/types";
 
 const DRAWER_WIDTH = 264;
 const APPBAR_HEIGHT = 68;
 
-const NAV_ITEMS = [
-  { to: "/applications", label: "طلبات فتح الوكالات", icon: <AssignmentIcon /> },
-  { to: "/topups", label: "طلبات تعبئة الرصيد", icon: <AccountBalanceWalletIcon /> },
-  { to: "/withdrawals", label: "طلبات السحب", icon: <PaymentsIcon /> },
-  { to: "/rooms", label: "الغرف الصوتية", icon: <MicIcon /> },
-  { to: "/gifts", label: "كتالوج الهدايا", icon: <CardGiftcardIcon /> },
-  { to: "/games", label: "ألعاب الرهان", icon: <CasinoIcon /> },
-  { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon /> },
+const NAV_ITEMS: { to: string; label: string; icon: JSX.Element; roles: GlobalRole[] }[] = [
+  {
+    to: "/admin-dashboard",
+    label: "لوحة المراقبة",
+    icon: <DashboardIcon />,
+    roles: ["OWNER", "RECHARGE_MANAGER", "ADMIN"],
+  },
+  { to: "/applications", label: "طلبات فتح الوكالات", icon: <AssignmentIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  {
+    to: "/topups",
+    label: "طلبات تعبئة الرصيد",
+    icon: <AccountBalanceWalletIcon />,
+    roles: ["OWNER", "RECHARGE_MANAGER"],
+  },
+  { to: "/withdrawals", label: "طلبات السحب", icon: <PaymentsIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/rooms", label: "الغرف الصوتية", icon: <MicIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/gifts", label: "كتالوج الهدايا", icon: <CardGiftcardIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/games", label: "ألعاب الرهان", icon: <CasinoIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/admin-invites", label: "دعوات الأدمن", icon: <PersonAddAlt1Icon />, roles: ["OWNER"] },
+  { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
 ];
+
+const ROLE_LABEL: Record<GlobalRole, string> = {
+  USER: "مستخدم",
+  RECHARGE_MANAGER: "مدير شحن",
+  OWNER: "المالك",
+  ADMIN: "أدمن",
+};
 
 function initialsOf(name?: string): string {
   if (!name) return "?";
@@ -87,7 +109,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </Box>
         <Divider />
         <List sx={{ px: 1, py: 2, flexGrow: 1 }}>
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.filter((item) => !user || item.roles.includes(user.globalRole)).map((item) => (
             <ListItemButton
               key={item.to}
               component={NavLink}
@@ -110,7 +132,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 {user?.fullName}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
-                {user?.globalRole === "OWNER" ? "المالك" : "مدير الشحن"}
+                {user ? ROLE_LABEL[user.globalRole] : ""}
               </Typography>
             </Box>
             <IconButton size="small" onClick={logout} title="تسجيل الخروج">

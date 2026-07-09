@@ -15,6 +15,7 @@ enum GlobalRole {
   USER
   RECHARGE_MANAGER
   OWNER
+  ADMIN
 }
 
 enum RechargeAgentRole {
@@ -174,7 +175,25 @@ model User {
   ownedHostAgencies    HostAgency[]       @relation("HostAgencyOwner")
   hostAgencyMembership HostAgencyMember?
 
+  createdAdminInvites AdminInvite[] @relation("AdminInviteCreatedBy")
+  usedAdminInvite     AdminInvite?  @relation("AdminInviteUsedBy")
+
   @@index([globalRole])
+}
+
+model AdminInvite {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  createdById String
+  createdBy   User      @relation("AdminInviteCreatedBy", fields: [createdById], references: [id])
+  usedById    String?   @unique
+  usedBy      User?     @relation("AdminInviteUsedBy", fields: [usedById], references: [id])
+  usedAt      DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([createdById])
 }
 
 model Session {

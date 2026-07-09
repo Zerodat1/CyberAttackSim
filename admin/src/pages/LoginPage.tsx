@@ -17,7 +17,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(identifier, password);
-      navigate("/applications");
+      navigate("/");
     } catch {
       setError("بيانات الدخول غير صحيحة");
     } finally {
