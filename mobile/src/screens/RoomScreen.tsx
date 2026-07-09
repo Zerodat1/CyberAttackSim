@@ -13,10 +13,17 @@ import type { Socket } from "socket.io-client";
 import { apiClient } from "@/api/client";
 import { createSocket } from "@/api/socket";
 import { useAuth } from "@/auth/AuthContext";
-import type { RoomDetail } from "@/api/types";
+import { GiftModal } from "@/components/GiftModal";
+import { DiceGameModal } from "@/components/DiceGameModal";
+import type { DiceGameRound, GiftSend, RoomDetail, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Room">;
+
+interface FeedItem {
+  id: string;
+  text: string;
+}
 
 export function RoomScreen({ route }: Props) {
   const { roomId } = route.params;
@@ -24,10 +31,19 @@ export function RoomScreen({ route }: Props) {
   const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
   const [joined, setJoined] = useState(false);
+  const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [gameModalVisible, setGameModalVisible] = useState(false);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
 
   const { data: room, isLoading } = useQuery({
     queryKey: ["room", roomId],
     queryFn: async () => (await apiClient.get<RoomDetail>(`/rooms/${roomId}`)).data,
+  });
+
+  const { data: wallet } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: async () => (await apiClient.get<UserWallet>("/wallet/me")).data,
+    refetchInterval: 5000,
   });
 
   const joinMutation = useMutation({
@@ -55,6 +71,18 @@ export function RoomScreen({ route }: Props) {
       socketRef.current = s;
       s.on("connect", () => s.emit("room:join", { roomId }));
       s.on("room:event", () => queryClient.invalidateQueries({ queryKey: ["room", roomId] }));
+      s.on("room:gift", (giftSend: GiftSend) => {
+        const label = giftSend.isLucky
+          ? `🎰 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username} (مضاعف x${giftSend.luckyMultiplier})`
+          : `🎁 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username}`;
+        setFeed((prev) => [{ id: giftSend.id, text: label }, ...prev].slice(0, 20));
+      });
+      s.on("room:game_round", (round: DiceGameRound) => {
+        const label = round.isWin
+          ? `🎲 لاعب راهن ${round.betAmount} وربح ${round.payout} (الرقم ${round.rolledNumber})`
+          : `🎲 لاعب راهن ${round.betAmount} وخسر (الرقم ${round.rolledNumber})`;
+        setFeed((prev) => [{ id: round.id, text: label }, ...prev].slice(0, 20));
+      });
     });
     return () => {
       socket?.emit("room:leave", { roomId });
@@ -81,6 +109,7 @@ export function RoomScreen({ route }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{room.name}</Text>
+      {wallet && <Text style={styles.walletText}>رصيدك: {wallet.goldBalance} ذهب · {wallet.diamondBalance} ألماس</Text>}
 
       {!joined && (
         <TouchableOpacity style={styles.button} onPress={() => joinMutation.mutate()}>
@@ -115,6 +144,28 @@ export function RoomScreen({ route }: Props) {
         </TouchableOpacity>
       )}
 
+      {joined && (
+        <View style={styles.actionsRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => setGiftModalVisible(true)}>
+            <Text style={styles.buttonText}>🎁 إرسال هدية</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => setGameModalVisible(true)}>
+            <Text style={styles.buttonText}>🎲 لعبة الرهان</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {feed.length > 0 && (
+        <View style={styles.feedBox}>
+          <Text style={styles.sectionTitle}>النشاط المباشر</Text>
+          {feed.map((item) => (
+            <Text key={item.id} style={styles.feedItem}>
+              {item.text}
+            </Text>
+          ))}
+        </View>
+      )}
+
       <Text style={styles.sectionTitle}>الأعضاء ({room.members.length})</Text>
       {room.members.map((member) => (
         <View key={member.id} style={styles.memberRow}>
@@ -122,6 +173,15 @@ export function RoomScreen({ route }: Props) {
           <Text style={styles.memberRole}>{member.role}</Text>
         </View>
       ))}
+
+      <GiftModal
+        visible={giftModalVisible}
+        roomId={roomId}
+        members={room.members}
+        currentUserId={user?.id}
+        onClose={() => setGiftModalVisible(false)}
+      />
+      <DiceGameModal visible={gameModalVisible} roomId={roomId} onClose={() => setGameModalVisible(false)} />
     </ScrollView>
   );
 }
@@ -129,7 +189,8 @@ export function RoomScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: "#0f1020" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0f1020" },
-  title: { fontSize: 22, fontWeight: "700", color: "#fff", textAlign: "right", marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: "700", color: "#fff", textAlign: "right" },
+  walletText: { color: "#f5c451", textAlign: "right", marginBottom: 16, fontSize: 13 },
   seatsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 16 },
   seat: {
     width: "23%",
@@ -145,6 +206,10 @@ const styles = StyleSheet.create({
   seatNumber: { color: "#7c86c9", fontSize: 10 },
   seatOccupant: { color: "#fff", fontSize: 11, marginTop: 4, textAlign: "center" },
   mutedIcon: { fontSize: 12, marginTop: 2 },
+  actionsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  actionButton: { flex: 1, backgroundColor: "#2a2c50", borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+  feedBox: { backgroundColor: "#151728", borderRadius: 12, padding: 12, marginBottom: 16 },
+  feedItem: { color: "#c9cdf2", fontSize: 12, textAlign: "right", marginBottom: 6 },
   sectionTitle: { color: "#fff", fontSize: 16, fontWeight: "700", textAlign: "right", marginVertical: 12 },
   memberRow: {
     flexDirection: "row-reverse",

@@ -3,7 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
-import type { RechargeAgencyApplication } from "@/api/types";
+import type { RechargeAgencyApplication, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Home">;
@@ -31,10 +31,28 @@ export function HomeScreen({ navigation }: Props) {
     },
   });
 
+  const { data: wallet } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: async () => (await apiClient.get<UserWallet>("/wallet/me")).data,
+  });
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.greeting}>مرحبًا، {user?.fullName}</Text>
       <Text style={styles.username}>@{user?.username}</Text>
+
+      {wallet && (
+        <View style={styles.walletCard}>
+          <View style={styles.walletItem}>
+            <Text style={styles.walletValue}>{wallet.goldBalance}</Text>
+            <Text style={styles.walletLabel}>ذهب 💰</Text>
+          </View>
+          <View style={styles.walletItem}>
+            <Text style={styles.walletValue}>{wallet.diamondBalance}</Text>
+            <Text style={styles.walletLabel}>ألماس 💎</Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.navRow}>
         <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("RoomsList")}>
@@ -84,6 +102,17 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, backgroundColor: "#0f1020" },
   greeting: { fontSize: 22, fontWeight: "700", color: "#fff", textAlign: "right" },
   username: { fontSize: 14, color: "#aab0d8", textAlign: "right", marginBottom: 24 },
+  walletCard: {
+    flexDirection: "row",
+    backgroundColor: "#1c1e3a",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    justifyContent: "space-around",
+  },
+  walletItem: { alignItems: "center" },
+  walletValue: { color: "#f5c451", fontSize: 18, fontWeight: "700" },
+  walletLabel: { color: "#aab0d8", fontSize: 12, marginTop: 2 },
   navRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   navCard: { flex: 1, backgroundColor: "#1c1e3a", borderRadius: 14, paddingVertical: 18, alignItems: "center" },
   navCardText: { color: "#fff", fontWeight: "700" },

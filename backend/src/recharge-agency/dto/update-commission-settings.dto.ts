@@ -33,4 +33,10 @@ export class UpdateCommissionSettingsDto {
   @IsNumber()
   @Min(0)
   largeTransactionAlert?: number;
+
+  @ApiPropertyOptional({ description: "How much Gold a user receives per 1 unit of currency charged" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  goldPerCurrencyUnit?: number;
 }

@@ -13,6 +13,7 @@ describe("RechargeChargeService", () => {
   const settings = {
     dailyChargeLimit: 5000,
     largeTransactionAlert: 1000,
+    goldPerCurrencyUnit: 100,
   };
 
   it("computes and splits commissions correctly for a successful charge", async () => {
@@ -32,7 +33,17 @@ describe("RechargeChargeService", () => {
     };
     prisma.$transaction = jest.fn(async (callback: (tx: unknown) => unknown) => callback(prisma));
 
-    const service = new RechargeChargeService(prisma, notifications as any, settingsService as any);
+    const walletService = {
+      creditGold: jest.fn().mockResolvedValue({}),
+      getOrCreateWallet: jest.fn().mockResolvedValue({ goldBalance: 0 }),
+    };
+
+    const service = new RechargeChargeService(
+      prisma,
+      notifications as any,
+      settingsService as any,
+      walletService as any,
+    );
 
     const result = await service.chargeUser(
       "agent-1",
@@ -66,7 +77,17 @@ describe("RechargeChargeService", () => {
     };
     prisma.$transaction = jest.fn(async (callback: (tx: unknown) => unknown) => callback(prisma));
 
-    const service = new RechargeChargeService(prisma, notifications as any, settingsService as any);
+    const walletService = {
+      creditGold: jest.fn().mockResolvedValue({}),
+      getOrCreateWallet: jest.fn().mockResolvedValue({ goldBalance: 0 }),
+    };
+
+    const service = new RechargeChargeService(
+      prisma,
+      notifications as any,
+      settingsService as any,
+      walletService as any,
+    );
 
     await expect(
       service.chargeUser("agent-1", { targetUserId: "target-user", amount: 100 }, {}),

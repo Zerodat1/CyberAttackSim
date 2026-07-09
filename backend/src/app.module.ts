@@ -12,6 +12,9 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { RechargeAgencyModule } from "./recharge-agency/recharge-agency.module";
 import { RoomsModule } from "./rooms/rooms.module";
 import { MessagingModule } from "./messaging/messaging.module";
+import { WalletModule } from "./wallet/wallet.module";
+import { GiftsModule } from "./gifts/gifts.module";
+import { GamesModule } from "./games/games.module";
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { MessagingModule } from "./messaging/messaging.module";
     RechargeAgencyModule,
     RoomsModule,
     MessagingModule,
+    WalletModule,
+    GiftsModule,
+    GamesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

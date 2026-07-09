@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { nanoid } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { WalletService } from "../wallet/wallet.service";
 import { RechargeSettingsService } from "./recharge-settings.service";
 import { ChargeUserDto } from "./dto/charge-user.dto";
 import { generateTransactionNumber } from "./utils/transaction-number";
@@ -17,6 +18,7 @@ export class RechargeChargeService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly settings: RechargeSettingsService,
+    private readonly wallet: WalletService,
   ) {}
 
   async chargeUser(agentId: string, dto: ChargeUserDto, ctx: ChargeRequestContext) {
@@ -89,11 +91,15 @@ export class RechargeChargeService {
     const agencyCommission = round2((dto.amount * Number(agent.agency.commissionRate)) / 100);
     const platformShare = round2(dto.amount - agentCommission - agencyCommission);
 
+    const goldCredited = round2(dto.amount * Number(settings.goldPerCurrencyUnit));
+
     const transaction = await this.prisma.$transaction(async (tx) => {
       await tx.rechargeWallet.update({
         where: { agentId },
         data: { balance: { decrement: dto.amount } },
       });
+
+      await this.wallet.creditGold(dto.targetUserId, goldCredited, tx);
 
       const created = await tx.rechargeTransaction.create({
         data: {
@@ -141,8 +147,8 @@ export class RechargeChargeService {
       dto.targetUserId,
       "WALLET_CREDITED",
       "تم شحن رصيدك",
-      `قام وكيل الشحن بإضافة ${dto.amount} إلى حسابك.`,
-      { transactionId: transaction.id },
+      `قام وكيل الشحن بإضافة ${goldCredited} ذهب إلى محفظتك.`,
+      { transactionId: transaction.id, goldCredited },
     );
 
     return transaction;

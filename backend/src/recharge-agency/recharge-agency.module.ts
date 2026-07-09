@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { WalletModule } from "../wallet/wallet.module";
 import { RechargeApplicationsController } from "./controllers/recharge-applications.controller";
 import { RechargeAgencyController } from "./controllers/recharge-agency.controller";
 import { RechargeWalletController } from "./controllers/recharge-wallet.controller";
@@ -14,7 +15,7 @@ import { RechargeStatsService } from "./recharge-stats.service";
 import { RechargeAgentGuard } from "./guards/recharge-agent.guard";
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [NotificationsModule, WalletModule],
   controllers: [
     RechargeApplicationsController,
     RechargeAgencyController,

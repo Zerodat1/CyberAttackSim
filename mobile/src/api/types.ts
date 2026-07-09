@@ -101,3 +101,61 @@ export interface ChatMessage {
   createdAt: string;
   sender: { id: string; username: string; avatarUrl: string | null };
 }
+
+export interface UserWallet {
+  id: string;
+  goldBalance: string;
+  diamondBalance: string;
+}
+
+export type GiftType = "STATIC" | "LUCKY";
+
+export interface Gift {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  price: string;
+  type: GiftType;
+  diamondShareRate: string;
+}
+
+export interface GiftSend {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  giftId: string;
+  roomId: string | null;
+  quantity: number;
+  totalGoldCost: string;
+  diamondsAwarded: string;
+  isLucky: boolean;
+  luckyMultiplier: string | null;
+  luckyPayoutGold: string | null;
+  sender: { id: string; username: string; avatarUrl: string | null };
+  recipient: { id: string; username: string; avatarUrl: string | null };
+  gift: Gift;
+}
+
+export interface DiceGameSettings {
+  minBet: string;
+  maxBet: string;
+  winMultiplier: string;
+  dailyBetLimit: string;
+}
+
+export interface DiceGameRound {
+  id: string;
+  playerId: string;
+  roomId: string | null;
+  betAmount: string;
+  choice: number;
+  rolledNumber: number;
+  multiplier: string;
+  payout: string;
+  isWin: boolean;
+}
+
+export interface PlayDiceResult {
+  round: DiceGameRound;
+  goldBalance: number;
+}

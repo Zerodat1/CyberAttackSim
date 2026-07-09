@@ -17,6 +17,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import TuneIcon from "@mui/icons-material/Tune";
 import MicIcon from "@mui/icons-material/Mic";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/auth/AuthContext";
 
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { to: "/topups", label: "طلبات تعبئة الرصيد", icon: <AccountBalanceWalletIcon /> },
   { to: "/withdrawals", label: "طلبات السحب", icon: <PaymentsIcon /> },
   { to: "/rooms", label: "الغرف الصوتية", icon: <MicIcon /> },
+  { to: "/gifts", label: "كتالوج الهدايا", icon: <CardGiftcardIcon /> },
   { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon /> },
 ];
 

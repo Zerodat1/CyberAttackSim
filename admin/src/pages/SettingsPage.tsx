@@ -17,6 +17,7 @@ export function SettingsPage() {
     dailyChargeLimit: "",
     dailyWithdrawLimit: "",
     largeTransactionAlert: "",
+    goldPerCurrencyUnit: "",
   });
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function SettingsPage() {
         dailyChargeLimit: settings.dailyChargeLimit,
         dailyWithdrawLimit: settings.dailyWithdrawLimit,
         largeTransactionAlert: settings.largeTransactionAlert,
+        goldPerCurrencyUnit: settings.goldPerCurrencyUnit,
       });
     }
   }, [settings]);
@@ -39,6 +41,7 @@ export function SettingsPage() {
         dailyChargeLimit: Number(form.dailyChargeLimit),
         dailyWithdrawLimit: Number(form.dailyWithdrawLimit),
         largeTransactionAlert: Number(form.largeTransactionAlert),
+        goldPerCurrencyUnit: Number(form.goldPerCurrencyUnit),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["commission-settings"] }),
   });
@@ -90,13 +93,22 @@ export function SettingsPage() {
               onChange={(e) => setField("dailyWithdrawLimit", e.target.value)}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={6}>
             <TextField
               fullWidth
               label="حد تنبيه العمليات الكبيرة"
               type="number"
               value={form.largeTransactionAlert}
               onChange={(e) => setField("largeTransactionAlert", e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              fullWidth
+              label="كمية الذهب لكل وحدة عملة عند الشحن"
+              type="number"
+              value={form.goldPerCurrencyUnit}
+              onChange={(e) => setField("goldPerCurrencyUnit", e.target.value)}
             />
           </Grid>
         </Grid>

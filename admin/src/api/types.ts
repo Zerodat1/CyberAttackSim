@@ -62,6 +62,34 @@ export interface CommissionSettings {
   dailyChargeLimit: string;
   dailyWithdrawLimit: string;
   largeTransactionAlert: string;
+  goldPerCurrencyUnit: string;
+}
+
+export type GiftType = "STATIC" | "LUCKY";
+
+export interface LuckyOddEntry {
+  multiplier: number;
+  weight: number;
+}
+
+export interface Gift {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  price: string;
+  type: GiftType;
+  isActive: boolean;
+  diamondShareRate: string;
+  luckyOdds: LuckyOddEntry[] | null;
+  createdAt: string;
+}
+
+export interface GameSettings {
+  id: string;
+  minBet: string;
+  maxBet: string;
+  winMultiplier: string;
+  dailyBetLimit: string;
 }
 
 export interface RoomSummary {

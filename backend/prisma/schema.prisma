@@ -75,6 +75,18 @@ enum NotificationType {
   ROOM_KICKED
   ROOM_BANNED
   ROOM_ROLE_CHANGED
+  GIFT_RECEIVED
+  GIFT_LUCKY_WIN
+  GAME_WIN
+}
+
+enum GiftType {
+  STATIC
+  LUCKY
+}
+
+enum GameType {
+  DICE_GUESS
 }
 
 enum RoomMemberRole {
@@ -149,6 +161,11 @@ model User {
   blockedUsers         BlockedUser[]         @relation("BlockerRelation")
   blockedByUsers       BlockedUser[]         @relation("BlockedRelation")
   messageReports       MessageReport[]
+
+  wallet        UserWallet?
+  giftsSent     GiftSend[]  @relation("GiftSender")
+  giftsReceived GiftSend[]  @relation("GiftRecipient")
+  gameRounds    GameRound[]
 
   @@index([globalRole])
 }
@@ -365,6 +382,7 @@ model CommissionSettings {
   dailyChargeLimit      Decimal  @default(5000) @db.Decimal(14, 2)
   dailyWithdrawLimit    Decimal  @default(2000) @db.Decimal(14, 2)
   largeTransactionAlert Decimal  @default(1000) @db.Decimal(14, 2)
+  goldPerCurrencyUnit   Decimal  @default(100) @db.Decimal(10, 2)
   updatedAt             DateTime @updatedAt
 }
 
@@ -387,6 +405,8 @@ model Room {
   members RoomMember[]
   seats   RoomSeat[]
   events  RoomEvent[]
+  gifts   GiftSend[]
+  games   GameRound[]
 
   @@index([isActive])
 }
@@ -520,4 +540,84 @@ model MessageReport {
   createdAt  DateTime @default(now())
 
   @@index([messageId])
+}
+
+// ---------------------------------------------------------------------------
+// User Wallet, Gifts & Betting Games (المحفظة، الهدايا، ألعاب الرهان)
+// ---------------------------------------------------------------------------
+
+model UserWallet {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goldBalance    Decimal  @default(0) @db.Decimal(14, 2)
+  diamondBalance Decimal  @default(0) @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Gift {
+  id               String   @id @default(uuid())
+  name             String
+  iconUrl          String?
+  price            Decimal  @db.Decimal(10, 2)
+  type             GiftType @default(STATIC)
+  isActive         Boolean  @default(true)
+  diamondShareRate Decimal  @default(50.0) @db.Decimal(5, 2)
+  luckyOdds        Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sends GiftSend[]
+}
+
+model GiftSend {
+  id              String   @id @default(uuid())
+  senderId        String
+  sender          User     @relation("GiftSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId     String
+  recipient       User     @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  giftId          String
+  gift            Gift     @relation(fields: [giftId], references: [id], onDelete: Restrict)
+  roomId          String?
+  room            Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  quantity        Int      @default(1)
+  totalGoldCost   Decimal  @db.Decimal(14, 2)
+  diamondsAwarded Decimal  @db.Decimal(14, 2)
+  isLucky         Boolean  @default(false)
+  luckyMultiplier Decimal? @db.Decimal(6, 2)
+  luckyPayoutGold Decimal? @db.Decimal(14, 2)
+  createdAt       DateTime @default(now())
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([roomId, createdAt])
+}
+
+model GameRound {
+  id           String   @id @default(uuid())
+  gameType     GameType @default(DICE_GUESS)
+  playerId     String
+  player       User     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  roomId       String?
+  room         Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  betAmount    Decimal  @db.Decimal(14, 2)
+  choice       Int
+  rolledNumber Int
+  multiplier   Decimal  @db.Decimal(6, 2)
+  payout       Decimal  @db.Decimal(14, 2)
+  isWin        Boolean
+  createdAt    DateTime @default(now())
+
+  @@index([playerId, createdAt])
+  @@index([roomId, createdAt])
+}
+
+model GameSettings {
+  id            String   @id @default("dice_guess")
+  minBet        Decimal  @default(10) @db.Decimal(14, 2)
+  maxBet        Decimal  @default(5000) @db.Decimal(14, 2)
+  winMultiplier Decimal  @default(9.0) @db.Decimal(6, 2)
+  dailyBetLimit Decimal  @default(20000) @db.Decimal(14, 2)
+  updatedAt     DateTime @updatedAt
 }
