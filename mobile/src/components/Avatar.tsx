@@ -1,12 +1,22 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { colorForName, initialsOf } from "@/theme";
 
 interface Props {
   name: string;
   size?: number;
+  imageUrl?: string | null;
 }
 
-export function Avatar({ name, size = 40 }: Props) {
+export function Avatar({ name, size = 40, imageUrl }: Props) {
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
+    );
+  }
+
   return (
     <View
       style={[

@@ -5,6 +5,21 @@ export interface AuthUser {
   email: string | null;
   phone: string | null;
   globalRole: string;
+  avatarUrl?: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  country: string | null;
+  globalRole: string;
+  twoFactorEnabled: boolean;
+  createdAt: string;
 }
 
 export interface RechargeWallet {

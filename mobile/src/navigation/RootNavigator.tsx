@@ -13,6 +13,7 @@ import { RoomsListScreen } from "@/screens/RoomsListScreen";
 import { RoomScreen } from "@/screens/RoomScreen";
 import { ConversationsListScreen } from "@/screens/ConversationsListScreen";
 import { ChatScreen } from "@/screens/ChatScreen";
+import { ProfileScreen } from "@/screens/ProfileScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -29,6 +30,7 @@ export type AppStackParamList = {
   Room: { roomId: string };
   ConversationsList: undefined;
   Chat: { conversationId: string; otherUserName: string };
+  Profile: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -71,6 +73,7 @@ function AppNavigator() {
         component={ChatScreen}
         options={({ route }) => ({ title: route.params.otherUserName })}
       />
+      <AppStack.Screen name="Profile" component={ProfileScreen} options={{ title: "الملف الشخصي" }} />
     </AppStack.Navigator>
   );
 }

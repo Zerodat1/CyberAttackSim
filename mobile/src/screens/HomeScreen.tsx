@@ -40,13 +40,13 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Avatar name={user?.fullName ?? "?"} size={52} />
+      <TouchableOpacity style={styles.header} onPress={() => navigation.navigate("Profile")}>
+        <Avatar name={user?.fullName ?? "?"} imageUrl={user?.avatarUrl} size={52} />
         <View style={styles.headerText}>
           <Text style={styles.greeting}>مرحبًا، {user?.fullName}</Text>
           <Text style={styles.username}>@{user?.username}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {wallet && (
         <View style={styles.walletCard}>

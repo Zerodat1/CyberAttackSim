@@ -126,6 +126,7 @@ model User {
   fullName            String
   username            String     @unique
   avatarUrl           String?
+  bio                 String?
   country             String?
   globalRole          GlobalRole @default(USER)
   isActive            Boolean    @default(true)

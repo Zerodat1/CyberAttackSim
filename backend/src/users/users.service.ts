@@ -9,6 +9,7 @@ const PUBLIC_SELECT = {
   email: true,
   phone: true,
   avatarUrl: true,
+  bio: true,
   country: true,
   globalRole: true,
   twoFactorEnabled: true,

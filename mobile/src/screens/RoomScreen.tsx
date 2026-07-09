@@ -133,26 +133,31 @@ export function RoomScreen({ route }: Props) {
 
       <View style={styles.seatsGrid}>
         {room.seats.map((seat) => (
-          <TouchableOpacity
-            key={seat.id}
-            disabled={!joined || !!seat.occupantId || seat.isLocked}
-            style={[
-              styles.seat,
-              seat.occupantId && styles.seatOccupied,
-              seat.isLocked && styles.seatLocked,
-            ]}
-            onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
-          >
-            {seat.occupant ? (
-              <Avatar name={seat.occupant.username} size={32} />
-            ) : (
-              <Text style={styles.seatNumber}>{seat.isLocked ? "🔒" : seat.seatNumber}</Text>
-            )}
-            <Text style={styles.seatOccupant} numberOfLines={1}>
+          <View key={seat.id} style={styles.seatWrapper}>
+            <TouchableOpacity
+              disabled={!joined || !!seat.occupantId || seat.isLocked}
+              style={[
+                styles.seatCircle,
+                seat.occupantId && styles.seatCircleOccupied,
+                seat.isLocked && styles.seatCircleLocked,
+              ]}
+              onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
+            >
+              {seat.occupant ? (
+                <Avatar name={seat.occupant.username} size={56} />
+              ) : (
+                <Text style={styles.seatIcon}>{seat.isLocked ? "🔒" : seat.seatNumber}</Text>
+              )}
+              {seat.isMuted && seat.occupantId && (
+                <View style={styles.mutedBadge}>
+                  <Text style={styles.mutedIcon}>🔇</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.seatLabel} numberOfLines={1}>
               {seat.isLocked ? "مقفل" : seat.occupant ? seat.occupant.username : "شاغر"}
             </Text>
-            {seat.isMuted && seat.occupantId && <Text style={styles.mutedIcon}>🔇</Text>}
-          </TouchableOpacity>
+          </View>
         ))}
       </View>
 
@@ -216,20 +221,35 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "700", color: colors.textPrimary, textAlign: "right" },
   walletText: { color: colors.gold, textAlign: "right", marginBottom: spacing.lg, fontSize: 13, fontWeight: "600" },
   seatsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
-  seat: {
-    width: "23%",
-    aspectRatio: 1,
+  seatWrapper: { width: "23%", alignItems: "center", marginBottom: spacing.lg },
+  seatCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.surface,
-    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.md,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.06)",
   },
-  seatOccupied: { backgroundColor: colors.surfaceMuted },
-  seatLocked: { backgroundColor: colors.surfaceAlt },
-  seatNumber: { color: colors.textMuted, fontSize: 14 },
-  seatOccupant: { color: colors.textPrimary, fontSize: 10, marginTop: 4, textAlign: "center", maxWidth: "90%" },
-  mutedIcon: { fontSize: 12, marginTop: 2, position: "absolute", top: 4, left: 4 },
+  seatCircleOccupied: { backgroundColor: colors.surfaceMuted, borderColor: colors.primary },
+  seatCircleLocked: { backgroundColor: colors.surfaceAlt, borderColor: "transparent" },
+  seatIcon: { color: colors.textMuted, fontSize: 16, fontWeight: "700" },
+  seatLabel: { color: colors.textPrimary, fontSize: 11, marginTop: spacing.xs, textAlign: "center", maxWidth: "100%" },
+  mutedBadge: {
+    position: "absolute",
+    bottom: -2,
+    left: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  mutedIcon: { fontSize: 11 },
   actionsRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.lg },
   actionButton: { flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   feedBox: { backgroundColor: colors.surfaceAlt, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.lg },
