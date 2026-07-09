@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Box, Button, Grid, Paper, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Grid, Paper, TextField } from "@mui/material";
 import { apiClient } from "@/api/client";
 import { CommissionSettings } from "@/api/types";
+import { PageHeader } from "@/components/PageHeader";
 
 export function SettingsPage() {
   const queryClient = useQueryClient();
@@ -52,10 +53,8 @@ export function SettingsPage() {
 
   return (
     <Box>
-      <Typography variant="h5" mb={2}>
-        إعدادات العمولات والحدود
-      </Typography>
-      <Paper sx={{ p: 3, maxWidth: 600 }}>
+      <PageHeader title="إعدادات العمولات والحدود" subtitle="هذه القيم تُطبَّق فورًا على كل العمليات دون الحاجة لتعديل الكود" />
+      <Paper sx={{ p: 3, maxWidth: 640, borderRadius: 3 }}>
         <Grid container spacing={2}>
           <Grid item xs={6}>
             <TextField

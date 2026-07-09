@@ -4,25 +4,25 @@ import {
   Alert,
   Box,
   Button,
+  Card,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Grid,
   MenuItem,
-  Paper,
+  Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
+import CasinoIcon from "@mui/icons-material/Casino";
 import { apiClient } from "@/api/client";
 import { Gift, GiftType } from "@/api/types";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 const DEFAULT_LUCKY_ODDS = JSON.stringify(
   [
@@ -81,57 +81,73 @@ export function GiftsPage() {
 
   return (
     <Box>
-      <Typography variant="h5" mb={2}>
-        كتالوج الهدايا
-      </Typography>
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>الاسم</TableCell>
-              <TableCell>السعر (ذهب)</TableCell>
-              <TableCell>النوع</TableCell>
-              <TableCell>نسبة الألماس للمستقبل %</TableCell>
-              <TableCell>الحالة</TableCell>
-              <TableCell>إجراء</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={6}>جارٍ التحميل...</TableCell>
-              </TableRow>
-            )}
-            {gifts?.map((gift) => (
-              <TableRow key={gift.id}>
-                <TableCell>{gift.name}</TableCell>
-                <TableCell>{gift.price}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={gift.type === "LUCKY" ? "محظوظة" : "ثابتة"}
-                    color={gift.type === "LUCKY" ? "warning" : "default"}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{gift.diamondShareRate}%</TableCell>
-                <TableCell>
-                  <Chip label={gift.isActive ? "مفعّلة" : "معطّلة"} color={gift.isActive ? "success" : "error"} size="small" />
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={gift.isActive}
-                    onChange={(e) => toggleActiveMutation.mutate({ id: gift.id, isActive: e.target.checked })}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <PageHeader
+        title="كتالوج الهدايا"
+        subtitle="أدر الهدايا الثابتة والمحظوظة المتاحة للمستخدمين"
+        action={
+          <Button variant="contained" onClick={() => setCreating(true)}>
+            + هدية جديدة
+          </Button>
+        }
+      />
 
-      <Button variant="contained" onClick={() => setCreating(true)}>
-        + هدية جديدة
-      </Button>
+      {!isLoading && gifts?.length === 0 && <EmptyState message="لم تُنشئ أي هدايا بعد" />}
+
+      <Grid container spacing={2}>
+        {gifts?.map((gift) => (
+          <Grid item xs={12} sm={6} md={4} key={gift.id}>
+            <Card sx={{ p: 2.5, borderRadius: 3, opacity: gift.isActive ? 1 : 0.55 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: gift.type === "LUCKY" ? "warning.light" : "primary.light",
+                    color: "#fff",
+                  }}
+                >
+                  {gift.type === "LUCKY" ? <CasinoIcon /> : <CardGiftcardIcon />}
+                </Box>
+                <Switch
+                  checked={gift.isActive}
+                  onChange={(e) => toggleActiveMutation.mutate({ id: gift.id, isActive: e.target.checked })}
+                />
+              </Stack>
+              <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+                {gift.name}
+              </Typography>
+              <Stack direction="row" spacing={1} mb={1.5}>
+                <Chip
+                  label={gift.type === "LUCKY" ? "محظوظة" : "ثابتة"}
+                  color={gift.type === "LUCKY" ? "warning" : "default"}
+                  size="small"
+                />
+                <Chip label={gift.isActive ? "مفعّلة" : "معطّلة"} color={gift.isActive ? "success" : "error"} size="small" variant="outlined" />
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  السعر
+                </Typography>
+                <Typography variant="body2" fontWeight={700}>
+                  {gift.price} ذهب
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  نسبة الألماس للمستقبل
+                </Typography>
+                <Typography variant="body2" fontWeight={700}>
+                  {gift.diamondShareRate}%
+                </Typography>
+              </Stack>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
       <Dialog open={creating} onClose={() => setCreating(false)} fullWidth maxWidth="sm">
         <DialogTitle>إنشاء هدية جديدة</DialogTitle>

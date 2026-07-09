@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Avatar,
   Box,
   Button,
   Chip,
@@ -8,8 +9,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  LinearProgress,
   MenuItem,
   Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -21,6 +24,8 @@ import {
 } from "@mui/material";
 import { apiClient } from "@/api/client";
 import { RechargeAgencyApplication } from "@/api/types";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "قيد المراجعة",
@@ -61,46 +66,55 @@ export function ApplicationsPage() {
 
   return (
     <Box>
-      <Typography variant="h5" mb={2}>
-        طلبات فتح وكالات الشحن
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>اسم الوكالة</TableCell>
-              <TableCell>المتقدم</TableCell>
-              <TableCell>الدولة/المدينة</TableCell>
-              <TableCell>الحالة</TableCell>
-              <TableCell>إجراء</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading && (
+      <PageHeader
+        title="طلبات فتح وكالات الشحن"
+        subtitle="راجع الطلبات الواردة ووافق أو ارفض أو اطلب تعديل البيانات"
+      />
+      <Paper sx={{ borderRadius: 3, overflow: "hidden" }}>
+        {isLoading && <LinearProgress />}
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5}>جارٍ التحميل...</TableCell>
+                <TableCell>المتقدم</TableCell>
+                <TableCell>اسم الوكالة</TableCell>
+                <TableCell>الدولة/المدينة</TableCell>
+                <TableCell>الحالة</TableCell>
+                <TableCell align="left">إجراء</TableCell>
               </TableRow>
-            )}
-            {applications?.map((app) => (
-              <TableRow key={app.id}>
-                <TableCell>{app.agencyName}</TableCell>
-                <TableCell>{app.fullName}</TableCell>
-                <TableCell>
-                  {app.country} / {app.city}
-                </TableCell>
-                <TableCell>
-                  <Chip label={STATUS_LABEL[app.status]} color={STATUS_COLOR[app.status]} size="small" />
-                </TableCell>
-                <TableCell>
-                  <Button size="small" onClick={() => setSelected(app)}>
-                    مراجعة
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {applications?.map((app) => (
+                <TableRow key={app.id} hover>
+                  <TableCell>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Avatar sx={{ width: 34, height: 34, fontSize: 13, bgcolor: "primary.main" }}>
+                        {app.fullName.slice(0, 1)}
+                      </Avatar>
+                      <Typography variant="body2" fontWeight={600}>
+                        {app.fullName}
+                      </Typography>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>{app.agencyName}</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>
+                    {app.country} / {app.city}
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={STATUS_LABEL[app.status]} color={STATUS_COLOR[app.status]} size="small" />
+                  </TableCell>
+                  <TableCell align="left">
+                    <Button size="small" onClick={() => setSelected(app)}>
+                      مراجعة
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {!isLoading && applications?.length === 0 && <EmptyState message="لا توجد طلبات حتى الآن" />}
+      </Paper>
 
       <Dialog open={!!selected} onClose={() => setSelected(null)} fullWidth maxWidth="sm">
         <DialogTitle>مراجعة طلب: {selected?.agencyName}</DialogTitle>

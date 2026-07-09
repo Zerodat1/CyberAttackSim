@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
+import { Avatar } from "@/components/Avatar";
+import { colors, radii, spacing } from "@/theme";
 import type { RoomSummary } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
@@ -39,17 +41,26 @@ export function RoomsListScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {isLoading && <ActivityIndicator color="#5b4cf5" style={{ marginTop: 20 }} />}
+      {isLoading && <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />}
+      {!isLoading && rooms?.length === 0 && (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🎙️</Text>
+          <Text style={styles.emptyText}>لا توجد غرف نشطة الآن، أنشئ أول غرفة!</Text>
+        </View>
+      )}
       <FlatList
         data={rooms}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: spacing.lg }}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Room", { roomId: item.id })}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.cardSubtitle}>
-              {item.owner.fullName} · {item._count.members} عضو {item.isPasswordProtected ? "· مغلقة" : ""}
-            </Text>
+            <Avatar name={item.owner.fullName} size={44} />
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Text style={styles.cardSubtitle}>
+                {item.owner.fullName} · {item._count.members} عضو {item.isPasswordProtected ? "· 🔒 مغلقة" : ""}
+              </Text>
+            </View>
           </TouchableOpacity>
         )}
       />
@@ -64,10 +75,11 @@ export function RoomsListScreen({ navigation }: Props) {
             <TextInput
               style={styles.input}
               placeholder="اسم الغرفة"
+              placeholderTextColor={colors.textMuted}
               value={newRoomName}
               onChangeText={setNewRoomName}
             />
-            <View style={{ flexDirection: "row-reverse", gap: 10 }}>
+            <View style={{ flexDirection: "row-reverse", gap: spacing.md }}>
               <TouchableOpacity
                 style={[styles.button, !newRoomName && styles.buttonDisabled]}
                 disabled={!newRoomName}
@@ -87,35 +99,51 @@ export function RoomsListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f1020" },
-  card: { backgroundColor: "#1c1e3a", borderRadius: 14, padding: 16, marginBottom: 12 },
-  cardTitle: { color: "#fff", fontSize: 16, fontWeight: "700", textAlign: "right" },
-  cardSubtitle: { color: "#aab0d8", fontSize: 12, marginTop: 4, textAlign: "right" },
+  container: { flex: 1, backgroundColor: colors.background },
+  emptyState: { alignItems: "center", justifyContent: "center", marginTop: 80, paddingHorizontal: spacing.xxl },
+  emptyIcon: { fontSize: 40, marginBottom: spacing.md },
+  emptyText: { color: colors.textSecondary, textAlign: "center" },
+  card: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  cardBody: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
+  cardTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right" },
+  cardSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 4, textAlign: "right" },
   fab: {
     position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
-    backgroundColor: "#5b4cf5",
-    borderRadius: 14,
-    paddingVertical: 16,
+    bottom: spacing.xl,
+    left: spacing.xl,
+    right: spacing.xl,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
     alignItems: "center",
+    shadowColor: colors.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   fabText: { color: "#fff", fontWeight: "700" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: 24 },
-  modalCard: { backgroundColor: "#1c1e3a", borderRadius: 16, padding: 20 },
-  modalTitle: { color: "#fff", fontSize: 18, fontWeight: "700", textAlign: "right", marginBottom: 16 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: spacing.xxl },
+  modalCard: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.xl },
+  modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: "700", textAlign: "right", marginBottom: spacing.lg },
   input: {
-    backgroundColor: "#0f1020",
-    color: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
     textAlign: "right",
   },
-  button: { backgroundColor: "#5b4cf5", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20 },
-  buttonSecondary: { backgroundColor: "#2a2c50", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20 },
+  button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
+  buttonSecondary: { backgroundColor: colors.surfaceMuted, borderRadius: radii.md, paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: "#fff", fontWeight: "700" },
 });

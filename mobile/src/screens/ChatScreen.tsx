@@ -6,6 +6,7 @@ import type { Socket } from "socket.io-client";
 import { apiClient } from "@/api/client";
 import { createSocket } from "@/api/socket";
 import { useAuth } from "@/auth/AuthContext";
+import { colors, radii, spacing } from "@/theme";
 import type { ChatMessage } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
@@ -74,7 +75,7 @@ export function ChatScreen({ route }: Props) {
       <FlatList
         data={[...(messages ?? [])].reverse()}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: spacing.lg }}
         renderItem={({ item }) => (
           <View
             style={[
@@ -99,6 +100,7 @@ export function ChatScreen({ route }: Props) {
         <TextInput
           style={styles.input}
           placeholder="اكتب رسالة..."
+          placeholderTextColor={colors.textMuted}
           value={draft}
           onChangeText={handleChangeText}
         />
@@ -108,24 +110,24 @@ export function ChatScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f1020" },
-  bubble: { maxWidth: "75%", borderRadius: 14, padding: 12, marginBottom: 10 },
-  bubbleMine: { backgroundColor: "#5b4cf5", alignSelf: "flex-start" },
-  bubbleTheirs: { backgroundColor: "#1c1e3a", alignSelf: "flex-end" },
-  bubbleText: { color: "#fff", textAlign: "right" },
+  container: { flex: 1, backgroundColor: colors.background },
+  bubble: { maxWidth: "75%", borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.sm },
+  bubbleMine: { backgroundColor: colors.primary, alignSelf: "flex-start", borderBottomLeftRadius: 4 },
+  bubbleTheirs: { backgroundColor: colors.surface, alignSelf: "flex-end", borderBottomRightRadius: 4 },
+  bubbleText: { color: colors.textPrimary, textAlign: "right" },
   editedTag: { color: "#c9cdf2", fontSize: 10, marginTop: 4, textAlign: "right" },
-  typing: { color: "#8f9bff", textAlign: "right", paddingHorizontal: 16, marginBottom: 4 },
-  inputRow: { flexDirection: "row-reverse", padding: 12, gap: 8 },
+  typing: { color: colors.primaryLight, textAlign: "right", paddingHorizontal: spacing.lg, marginBottom: spacing.xs },
+  inputRow: { flexDirection: "row-reverse", padding: spacing.md, gap: spacing.sm },
   input: {
     flex: 1,
-    backgroundColor: "#1c1e3a",
-    color: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     textAlign: "right",
   },
-  sendButton: { backgroundColor: "#5b4cf5", borderRadius: 12, paddingHorizontal: 18, justifyContent: "center" },
+  sendButton: { backgroundColor: colors.primary, borderRadius: radii.md, paddingHorizontal: spacing.xl, justifyContent: "center" },
   sendButtonDisabled: { opacity: 0.5 },
   sendButtonText: { color: "#fff", fontWeight: "700" },
 });

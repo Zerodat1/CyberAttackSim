@@ -13,9 +13,11 @@ import type { Socket } from "socket.io-client";
 import { apiClient } from "@/api/client";
 import { createSocket } from "@/api/socket";
 import { useAuth } from "@/auth/AuthContext";
+import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
 import { DiceGameModal } from "@/components/DiceGameModal";
-import type { DiceGameRound, GiftSend, RoomDetail, UserWallet } from "@/api/types";
+import { colors, radii, spacing } from "@/theme";
+import type { DiceGameRound, GiftSend, RoomDetail, RoomMemberRole, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Room">;
@@ -24,6 +26,14 @@ interface FeedItem {
   id: string;
   text: string;
 }
+
+const ROLE_LABEL: Record<RoomMemberRole, string> = {
+  OWNER: "المالك",
+  CO_OWNER: "شريك",
+  ADMIN: "مشرف",
+  MODERATOR: "منسّق",
+  MEMBER: "عضو",
+};
 
 export function RoomScreen({ route }: Props) {
   const { roomId } = route.params;
@@ -99,7 +109,7 @@ export function RoomScreen({ route }: Props) {
   if (isLoading || !room) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#5b4cf5" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -109,7 +119,11 @@ export function RoomScreen({ route }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{room.name}</Text>
-      {wallet && <Text style={styles.walletText}>رصيدك: {wallet.goldBalance} ذهب · {wallet.diamondBalance} ألماس</Text>}
+      {wallet && (
+        <Text style={styles.walletText}>
+          رصيدك: {wallet.goldBalance} 💰 · {wallet.diamondBalance} 💎
+        </Text>
+      )}
 
       {!joined && (
         <TouchableOpacity style={styles.button} onPress={() => joinMutation.mutate()}>
@@ -129,8 +143,12 @@ export function RoomScreen({ route }: Props) {
             ]}
             onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
           >
-            <Text style={styles.seatNumber}>{seat.seatNumber}</Text>
-            <Text style={styles.seatOccupant}>
+            {seat.occupant ? (
+              <Avatar name={seat.occupant.username} size={32} />
+            ) : (
+              <Text style={styles.seatNumber}>{seat.isLocked ? "🔒" : seat.seatNumber}</Text>
+            )}
+            <Text style={styles.seatOccupant} numberOfLines={1}>
               {seat.isLocked ? "مقفل" : seat.occupant ? seat.occupant.username : "شاغر"}
             </Text>
             {seat.isMuted && seat.occupantId && <Text style={styles.mutedIcon}>🔇</Text>}
@@ -169,8 +187,14 @@ export function RoomScreen({ route }: Props) {
       <Text style={styles.sectionTitle}>الأعضاء ({room.members.length})</Text>
       {room.members.map((member) => (
         <View key={member.id} style={styles.memberRow}>
-          <Text style={styles.memberName}>{member.user.fullName}</Text>
-          <Text style={styles.memberRole}>{member.role}</Text>
+          <View style={styles.memberRoleBadge}>
+            <Text style={styles.memberRole}>{ROLE_LABEL[member.role]}</Text>
+          </View>
+          <View style={styles.memberInfo}>
+            <Text style={styles.memberName}>{member.user.fullName}</Text>
+            <Text style={styles.memberUsername}>@{member.user.username}</Text>
+          </View>
+          <Avatar name={member.user.username} size={36} />
         </View>
       ))}
 
@@ -187,47 +211,55 @@ export function RoomScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, backgroundColor: "#0f1020" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0f1020" },
-  title: { fontSize: 22, fontWeight: "700", color: "#fff", textAlign: "right" },
-  walletText: { color: "#f5c451", textAlign: "right", marginBottom: 16, fontSize: 13 },
-  seatsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 16 },
+  container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
+  title: { fontSize: 22, fontWeight: "700", color: colors.textPrimary, textAlign: "right" },
+  walletText: { color: colors.gold, textAlign: "right", marginBottom: spacing.lg, fontSize: 13, fontWeight: "600" },
+  seatsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
   seat: {
     width: "23%",
     aspectRatio: 1,
-    backgroundColor: "#1c1e3a",
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
-  seatOccupied: { backgroundColor: "#2a2c60" },
-  seatLocked: { backgroundColor: "#151626" },
-  seatNumber: { color: "#7c86c9", fontSize: 10 },
-  seatOccupant: { color: "#fff", fontSize: 11, marginTop: 4, textAlign: "center" },
-  mutedIcon: { fontSize: 12, marginTop: 2 },
-  actionsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  actionButton: { flex: 1, backgroundColor: "#2a2c50", borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  feedBox: { backgroundColor: "#151728", borderRadius: 12, padding: 12, marginBottom: 16 },
-  feedItem: { color: "#c9cdf2", fontSize: 12, textAlign: "right", marginBottom: 6 },
-  sectionTitle: { color: "#fff", fontSize: 16, fontWeight: "700", textAlign: "right", marginVertical: 12 },
+  seatOccupied: { backgroundColor: colors.surfaceMuted },
+  seatLocked: { backgroundColor: colors.surfaceAlt },
+  seatNumber: { color: colors.textMuted, fontSize: 14 },
+  seatOccupant: { color: colors.textPrimary, fontSize: 10, marginTop: 4, textAlign: "center", maxWidth: "90%" },
+  mutedIcon: { fontSize: 12, marginTop: 2, position: "absolute", top: 4, left: 4 },
+  actionsRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.lg },
+  actionButton: { flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
+  feedBox: { backgroundColor: colors.surfaceAlt, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.lg },
+  feedItem: { color: "#c9cdf2", fontSize: 12, textAlign: "right", marginBottom: spacing.xs },
+  sectionTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right", marginVertical: spacing.md },
   memberRow: {
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    backgroundColor: "#1c1e3a",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-  },
-  memberName: { color: "#fff" },
-  memberRole: { color: "#8f9bff", fontSize: 12 },
-  button: { backgroundColor: "#5b4cf5", borderRadius: 12, paddingVertical: 14, alignItems: "center", marginBottom: 16 },
-  buttonSecondary: {
-    backgroundColor: "#2a2c50",
-    borderRadius: 12,
-    paddingVertical: 12,
     alignItems: "center",
-    marginBottom: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  memberInfo: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
+  memberName: { color: colors.textPrimary, fontWeight: "600" },
+  memberUsername: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  memberRoleBadge: {
+    backgroundColor: "rgba(91, 76, 245, 0.15)",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  memberRole: { color: colors.primaryLight, fontSize: 11, fontWeight: "700" },
+  button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", marginBottom: spacing.lg },
+  buttonSecondary: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    marginBottom: spacing.lg,
   },
   buttonText: { color: "#fff", fontWeight: "700" },
 });
