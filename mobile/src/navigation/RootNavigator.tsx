@@ -1,0 +1,70 @@
+import { ActivityIndicator, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuth } from "@/auth/AuthContext";
+import { LoginScreen } from "@/screens/LoginScreen";
+import { RegisterScreen } from "@/screens/RegisterScreen";
+import { HomeScreen } from "@/screens/HomeScreen";
+import { ApplyAgencyScreen } from "@/screens/ApplyAgencyScreen";
+import { AgentDashboardScreen } from "@/screens/AgentDashboardScreen";
+import { ChargeUserScreen } from "@/screens/ChargeUserScreen";
+import { WithdrawalRequestScreen } from "@/screens/WithdrawalRequestScreen";
+
+export type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+};
+
+export type AppStackParamList = {
+  Home: undefined;
+  ApplyAgency: undefined;
+  AgentDashboard: undefined;
+  ChargeUser: undefined;
+  WithdrawalRequest: undefined;
+};
+
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const AppStack = createNativeStackNavigator<AppStackParamList>();
+
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+function AppNavigator() {
+  return (
+    <AppStack.Navigator screenOptions={{ headerStyle: { backgroundColor: "#0f1020" }, headerTintColor: "#fff" }}>
+      <AppStack.Screen name="Home" component={HomeScreen} options={{ title: "الرئيسية" }} />
+      <AppStack.Screen name="ApplyAgency" component={ApplyAgencyScreen} options={{ title: "طلب فتح وكالة" }} />
+      <AppStack.Screen
+        name="AgentDashboard"
+        component={AgentDashboardScreen}
+        options={{ title: "لوحة وكالة الشحن" }}
+      />
+      <AppStack.Screen name="ChargeUser" component={ChargeUserScreen} options={{ title: "شحن مستخدم" }} />
+      <AppStack.Screen
+        name="WithdrawalRequest"
+        component={WithdrawalRequestScreen}
+        options={{ title: "طلب سحب" }}
+      />
+    </AppStack.Navigator>
+  );
+}
+
+export function RootNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0f1020" }}>
+        <ActivityIndicator color="#5b4cf5" />
+      </View>
+    );
+  }
+
+  return <NavigationContainer>{user ? <AppNavigator /> : <AuthNavigator />}</NavigationContainer>;
+}

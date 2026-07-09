@@ -1,0 +1,327 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum GlobalRole {
+  USER
+  RECHARGE_MANAGER
+  OWNER
+}
+
+enum RechargeAgentRole {
+  MASTER
+  SUB_AGENT
+}
+
+enum RechargeAgencyStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+  SUSPENDED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum RechargeTransactionStatus {
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+enum WalletOwnerType {
+  AGENCY
+  AGENT
+}
+
+enum NotificationType {
+  APPLICATION_APPROVED
+  APPLICATION_REJECTED
+  APPLICATION_CHANGES_REQUESTED
+  APPLICATION_SUSPENDED
+  WALLET_CREDITED
+  WALLET_DEBITED
+  CHARGE_SUCCESS
+  CHARGE_FAILED
+  TOPUP_REQUEST_SUBMITTED
+  TOPUP_REQUEST_APPROVED
+  TOPUP_REQUEST_REJECTED
+  WITHDRAWAL_REQUESTED
+  WITHDRAWAL_APPROVED
+  WITHDRAWAL_REJECTED
+  LOW_BALANCE
+  NEW_DEVICE_LOGIN
+}
+
+// ---------------------------------------------------------------------------
+// Identity & Access
+// ---------------------------------------------------------------------------
+
+model User {
+  id                  String     @id @default(uuid())
+  email               String?    @unique
+  phone               String?    @unique
+  passwordHash        String
+  fullName            String
+  username            String     @unique
+  avatarUrl           String?
+  country             String?
+  globalRole          GlobalRole @default(USER)
+  isActive            Boolean    @default(true)
+  failedLoginAttempts Int        @default(0)
+  lockedUntil         DateTime?
+
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions             Session[]
+  loginHistory         LoginHistory[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]                  @relation("AuditActor")
+  rechargeApplication  RechargeAgencyApplication?
+  rechargeAgent        RechargeAgent?
+  ownedRechargeAgency  RechargeAgency?
+  reviewedApplications RechargeAgencyApplication[] @relation("ApplicationReviewer")
+  reviewedTopUps       TopUpRequest[]              @relation("TopUpReviewer")
+  reviewedWithdrawals  WithdrawalRequest[]         @relation("WithdrawalReviewer")
+
+  @@index([globalRole])
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  device           String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  @@index([userId])
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  device    String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Recharge Agency System (نظام وكالات الشحن)
+// ---------------------------------------------------------------------------
+
+model RechargeAgencyApplication {
+  id                 String            @id @default(uuid())
+  applicantId        String            @unique
+  applicant          User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  fullName           String
+  agencyName         String
+  country            String
+  city               String
+  phone              String
+  email              String
+  paymentMethods     String[]
+  previousExperience String?
+  yearsOfExperience  Int?
+  socialLinks        Json?
+  idDocumentUrl      String?
+  termsAccepted      Boolean           @default(false)
+  status             ApplicationStatus @default(PENDING)
+  reviewedById       String?
+  reviewer           User?             @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNotes        String?
+  reviewedAt         DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  agency RechargeAgency?
+
+  @@index([status])
+}
+
+model RechargeAgency {
+  id             String                    @id @default(uuid())
+  applicationId  String                    @unique
+  application    RechargeAgencyApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name           String
+  country        String
+  city           String
+  ownerId        String                    @unique
+  owner          User                      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  status         RechargeAgencyStatus      @default(ACTIVE)
+  commissionRate Decimal                   @default(2.0) @db.Decimal(5, 2)
+  monthlyTarget  Decimal?                  @db.Decimal(14, 2)
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  agents  RechargeAgent[]
+  wallets RechargeWallet[]
+
+  @@index([status])
+}
+
+model RechargeAgent {
+  id             String               @id @default(uuid())
+  userId         String               @unique
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId       String
+  agency         RechargeAgency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  role           RechargeAgentRole    @default(SUB_AGENT)
+  commissionRate Decimal              @default(5.0) @db.Decimal(5, 2)
+  status         RechargeAgencyStatus @default(ACTIVE)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  wallet             RechargeWallet?
+  topUpRequests      TopUpRequest[]
+  withdrawalRequests WithdrawalRequest[]
+  transactions       RechargeTransaction[]
+
+  @@index([agencyId])
+}
+
+model RechargeWallet {
+  id            String          @id @default(uuid())
+  ownerType     WalletOwnerType
+  agencyId      String?         @unique
+  agency        RechargeAgency? @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agentId       String?         @unique
+  agent         RechargeAgent?  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  balance       Decimal         @default(0) @db.Decimal(14, 2)
+  frozenBalance Decimal         @default(0) @db.Decimal(14, 2)
+  currency      String          @default("USD")
+  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime        @default(now())
+}
+
+model TopUpRequest {
+  id            String        @id @default(uuid())
+  agentId       String
+  agent         RechargeAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  amount        Decimal       @db.Decimal(14, 2)
+  paymentMethod String
+  proofUrl      String?
+  status        RequestStatus @default(PENDING)
+  reviewedById  String?
+  reviewer      User?         @relation("TopUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNotes   String?
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([agentId, status])
+}
+
+model WithdrawalRequest {
+  id            String        @id @default(uuid())
+  agentId       String
+  agent         RechargeAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  amount        Decimal       @db.Decimal(14, 2)
+  method        String
+  accountNumber String
+  notes         String?
+  status        RequestStatus @default(PENDING)
+  reviewedById  String?
+  reviewer      User?         @relation("WithdrawalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNotes   String?
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([agentId, status])
+}
+
+model RechargeTransaction {
+  id                String                    @id @default(uuid())
+  transactionNumber String                    @unique
+  idempotencyKey    String                    @unique
+  agentId           String
+  agent             RechargeAgent             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  targetUserId      String
+  amount            Decimal                   @db.Decimal(14, 2)
+  currency          String                    @default("USD")
+  agentCommission   Decimal                   @db.Decimal(14, 2)
+  agencyCommission  Decimal                   @db.Decimal(14, 2)
+  platformShare     Decimal                   @db.Decimal(14, 2)
+  status            RechargeTransactionStatus @default(SUCCESS)
+  ipAddress         String?
+  device            String?
+  paymentMethod     String?
+  notes             String?
+  createdAt         DateTime                  @default(now())
+
+  @@index([agentId, createdAt])
+  @@index([targetUserId, createdAt])
+}
+
+model CommissionSettings {
+  id                    String   @id @default("default")
+  agentCommissionRate   Decimal  @default(5.0) @db.Decimal(5, 2)
+  agencyCommissionRate  Decimal  @default(2.0) @db.Decimal(5, 2)
+  platformRate          Decimal  @default(93.0) @db.Decimal(5, 2)
+  dailyChargeLimit      Decimal  @default(5000) @db.Decimal(14, 2)
+  dailyWithdrawLimit    Decimal  @default(2000) @db.Decimal(14, 2)
+  largeTransactionAlert Decimal  @default(1000) @db.Decimal(14, 2)
+  updatedAt             DateTime @updatedAt
+}

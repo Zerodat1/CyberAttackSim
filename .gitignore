@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.local
+*.log
+.DS_Store
+.turbo/
+backend/generated/
+backend/prisma/migrations/dev/
+mobile/ios/Pods/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/.expo/
+admin/dist/
+*.tsbuildinfo

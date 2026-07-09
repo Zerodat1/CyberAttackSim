@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Code",
+    "slug": "code",
+    "scheme": "code",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.code.mobile"
+    },
+    "android": {
+      "package": "app.code.mobile"
+    }
+  }
+}
