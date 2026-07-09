@@ -56,6 +56,12 @@ export function RoomScreen({ route, navigation }: Props) {
   const [gameModalVisible, setGameModalVisible] = useState(false);
   const [membersModalVisible, setMembersModalVisible] = useState(false);
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [deafened, setDeafened] = useState(false);
+  const deafenedRef = useRef(false);
+
+  useEffect(() => {
+    deafenedRef.current = deafened;
+  }, [deafened]);
 
   const { data: room, isLoading } = useQuery({
     queryKey: ["room", roomId],
@@ -86,6 +92,12 @@ export function RoomScreen({ route, navigation }: Props) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["room", roomId] }),
   });
 
+  const toggleMicMutation = useMutation({
+    mutationFn: async ({ seatNumber, muted }: { seatNumber: number; muted: boolean }) =>
+      apiClient.patch(`/rooms/${roomId}/seats/${seatNumber}/mute`, { muted }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["room", roomId] }),
+  });
+
   useEffect(() => {
     let socket: Socket;
     createSocket("rooms").then((s) => {
@@ -94,12 +106,14 @@ export function RoomScreen({ route, navigation }: Props) {
       s.on("connect", () => s.emit("room:join", { roomId }));
       s.on("room:event", () => queryClient.invalidateQueries({ queryKey: ["room", roomId] }));
       s.on("room:gift", (giftSend: GiftSend) => {
+        if (deafenedRef.current) return;
         const label = giftSend.isLucky
           ? `🎰 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username} (مضاعف x${giftSend.luckyMultiplier})`
           : `🎁 ${giftSend.sender.username} أرسل "${giftSend.gift.name}" لـ ${giftSend.recipient.username}`;
         setFeed((prev) => [{ id: giftSend.id, text: label }, ...prev].slice(0, 20));
       });
       s.on("room:game_round", (round: GameRound) => {
+        if (deafenedRef.current) return;
         const icon = GAME_ICON[round.gameType] ?? "🎮";
         const label = round.isWin
           ? `${icon} لاعب راهن ${round.betAmount} وربح ${round.payout}`
@@ -232,6 +246,20 @@ export function RoomScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         ) : (
           <>
+            {mySeat && (
+              <TouchableOpacity
+                style={[styles.bottomIconButton, mySeat.isMuted && styles.bottomIconButtonActive]}
+                onPress={() => toggleMicMutation.mutate({ seatNumber: mySeat.seatNumber, muted: !mySeat.isMuted })}
+              >
+                <Text style={styles.bottomIconText}>{mySeat.isMuted ? "🔇" : "🎙️"}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.bottomIconButton, deafened && styles.bottomIconButtonActive]}
+              onPress={() => setDeafened((d) => !d)}
+            >
+              <Text style={styles.bottomIconText}>{deafened ? "🔈" : "🔊"}</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.bottomIconButton} onPress={() => setGiftModalVisible(true)}>
               <Text style={styles.bottomIconText}>🎁</Text>
             </TouchableOpacity>
@@ -425,6 +453,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  bottomIconButtonActive: { backgroundColor: "rgba(255,107,107,0.25)" },
   bottomIconText: { fontSize: 22 },
   joinButton: {
     flex: 1,
