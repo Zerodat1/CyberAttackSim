@@ -184,3 +184,95 @@ export interface VipLevel {
   entranceColorHex: string;
   isActive: boolean;
 }
+
+export interface RechargePackage {
+  id: string;
+  priceUsd: string;
+  baseGold: string;
+  bonusPercent: string;
+  totalGold: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface HostTargetTier {
+  id: string;
+  thresholdDiamonds: string;
+  salaryUsd: string;
+  sortOrder: number;
+}
+
+export interface HostEconomySettings {
+  id: string;
+  giftHostShareRate: string;
+  agencyBaseRate: string;
+  agencyTargetRate: string;
+  agencyPremiumRate: string;
+  diamondToUsdRate: string;
+}
+
+export interface HostAgencyAdminOverview {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  owner: { id: string; username: string; fullName: string; avatarUrl: string | null };
+  _count: { members: number };
+  isPremium: boolean;
+  monthlyTargetDiamonds: string | null;
+  monthlyDiamonds: string;
+  commissionBalance: string;
+}
+
+export interface HostAgencyHostIncome {
+  userId: string;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+  role: "OWNER" | "HOST";
+  monthlyDiamonds: number;
+  lifetimeDiamonds: number;
+  currentTierSalaryUsd: number;
+}
+
+export interface HostAgencyDashboard {
+  agencyId: string;
+  name: string;
+  isPremium: boolean;
+  monthlyTargetDiamonds: number | null;
+  monthlyDiamonds: number;
+  effectiveCommissionRate: number;
+  commissionBalance: number;
+  dailyProfitUsd: number;
+  monthlyProfitUsd: number;
+  hostsCount: number;
+  hosts: HostAgencyHostIncome[];
+  withdrawalHistory: AgencyWithdrawalRequest[];
+}
+
+export interface HostWithdrawalRequest {
+  id: string;
+  hostId: string;
+  diamondsAmount: string;
+  usdAmount: string;
+  method: string;
+  accountNumber: string;
+  notes: string | null;
+  status: RequestStatus;
+  createdAt: string;
+  host?: { id: string; username: string; fullName: string };
+}
+
+export interface AgencyWithdrawalRequest {
+  id: string;
+  agencyId: string;
+  usdAmount: string;
+  method: string;
+  accountNumber: string;
+  notes: string | null;
+  status: RequestStatus;
+  createdAt: string;
+  agency?: { id: string; name: string };
+}

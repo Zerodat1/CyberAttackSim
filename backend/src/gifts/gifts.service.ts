@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { WalletService } from "../wallet/wallet.service";
+import { HostEarningsService } from "../host-agencies/host-earnings.service";
+import { HostEconomySettingsService } from "../host-agencies/host-economy-settings.service";
 import { CreateGiftDto } from "./dto/create-gift.dto";
 import { UpdateGiftDto } from "./dto/update-gift.dto";
 import { SendGiftDto } from "./dto/send-gift.dto";
@@ -18,6 +20,8 @@ export class GiftsService {
     private readonly notifications: NotificationsService,
     private readonly wallet: WalletService,
     private readonly events: EventEmitter2,
+    private readonly hostEarnings: HostEarningsService,
+    private readonly economySettings: HostEconomySettingsService,
   ) {}
 
   async listCatalog() {
@@ -29,13 +33,14 @@ export class GiftsService {
   }
 
   async createGift(dto: CreateGiftDto) {
+    const defaultShareRate = dto.diamondShareRate ?? Number((await this.economySettings.getSettings()).giftHostShareRate);
     return this.prisma.gift.create({
       data: {
         name: dto.name,
         iconUrl: dto.iconUrl,
         price: dto.price,
         type: dto.type,
-        diamondShareRate: dto.diamondShareRate ?? 50,
+        diamondShareRate: defaultShareRate,
         luckyOdds: dto.luckyOdds as unknown as Prisma.InputJsonValue,
       },
     });
@@ -83,7 +88,7 @@ export class GiftsService {
 
       await this.wallet.creditDiamond(dto.recipientId, diamondsAwarded, tx);
 
-      return tx.giftSend.create({
+      const created = await tx.giftSend.create({
         data: {
           senderId,
           recipientId: dto.recipientId,
@@ -102,6 +107,10 @@ export class GiftsService {
           gift: true,
         },
       });
+
+      await this.hostEarnings.recordGiftEarnings(dto.recipientId, diamondsAwarded, created.id, tx);
+
+      return created;
     });
 
     this.events.emit(GIFT_SENT_EVENT, giftSend);

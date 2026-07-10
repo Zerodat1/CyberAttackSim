@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { GlobalRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
@@ -9,9 +9,12 @@ import { AuthenticatedUser } from "../../common/types/authenticated-user";
 import { RechargeWalletService } from "../recharge-wallet.service";
 import { RechargeSettingsService } from "../recharge-settings.service";
 import { RechargeStatsService } from "../recharge-stats.service";
+import { RechargePackagesService } from "../recharge-packages.service";
 import { ReviewRequestDto } from "../dto/review-request.dto";
 import { ManualCreditDto } from "../dto/manual-credit.dto";
 import { UpdateCommissionSettingsDto } from "../dto/update-commission-settings.dto";
+import { CreateRechargePackageDto } from "../dto/create-recharge-package.dto";
+import { UpdateRechargePackageDto } from "../dto/update-recharge-package.dto";
 
 @ApiTags("recharge-agency-admin")
 @ApiBearerAuth()
@@ -23,6 +26,7 @@ export class RechargeAdminController {
     private readonly walletService: RechargeWalletService,
     private readonly settingsService: RechargeSettingsService,
     private readonly statsService: RechargeStatsService,
+    private readonly packagesService: RechargePackagesService,
   ) {}
 
   @Get("topup-requests")
@@ -78,5 +82,25 @@ export class RechargeAdminController {
   @Get("agencies/:agencyId/stats")
   agencyStats(@Param("agencyId") agencyId: string) {
     return this.statsService.getAgencyDashboard(agencyId);
+  }
+
+  @Get("packages")
+  listPackages() {
+    return this.packagesService.listAll();
+  }
+
+  @Post("packages")
+  createPackage(@Body() dto: CreateRechargePackageDto) {
+    return this.packagesService.create(dto);
+  }
+
+  @Patch("packages/:id")
+  updatePackage(@Param("id") id: string, @Body() dto: UpdateRechargePackageDto) {
+    return this.packagesService.update(id, dto);
+  }
+
+  @Delete("packages/:id")
+  deletePackage(@Param("id") id: string) {
+    return this.packagesService.delete(id);
   }
 }

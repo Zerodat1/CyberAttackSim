@@ -14,6 +14,8 @@ import { VipPage } from "@/pages/VipPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminsPage } from "@/pages/AdminsPage";
 import { UsersPage } from "@/pages/UsersPage";
+import { EconomyPage } from "@/pages/EconomyPage";
+import { HostAgenciesPage } from "@/pages/HostAgenciesPage";
 import { GlobalRole } from "@/api/types";
 
 const MANAGEMENT_ROLES: GlobalRole[] = ["OWNER", "RECHARGE_MANAGER"];
@@ -146,6 +148,22 @@ export function App() {
         element={
           <ProtectedLayout>
             <VipPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/economy"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <EconomyPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/host-agencies"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <HostAgenciesPage />
           </ProtectedLayout>
         }
       />

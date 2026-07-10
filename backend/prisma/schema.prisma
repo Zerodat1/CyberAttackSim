@@ -187,7 +187,7 @@ model User {
   giftsReceived GiftSend[]  @relation("GiftRecipient")
   gameRounds    GameRound[]
 
-  ownedHostAgencies    HostAgency[]       @relation("HostAgencyOwner")
+  ownedHostAgencies    HostAgency[]      @relation("HostAgencyOwner")
   hostAgencyMembership HostAgencyMember?
 
   purchasedStoreItems UserStoreItem[]
@@ -211,16 +211,20 @@ model User {
 
   deviceTokens DeviceToken[]
 
+  hostWithdrawalRequests    HostWithdrawalRequest[]   @relation("HostWithdrawalHost")
+  reviewedHostWithdrawals   HostWithdrawalRequest[]   @relation("HostWithdrawalReviewer")
+  reviewedAgencyWithdrawals AgencyWithdrawalRequest[] @relation("AgencyWithdrawalReviewer")
+
   @@index([globalRole])
 }
 
 model BannedIp {
-  id           String   @id @default(uuid())
-  ipAddress    String   @unique
-  reason       String?
-  bannedById   String?
-  bannedBy     User?    @relation("IpBannedBy", fields: [bannedById], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
+  id         String   @id @default(uuid())
+  ipAddress  String   @unique
+  reason     String?
+  bannedById String?
+  bannedBy   User?    @relation("IpBannedBy", fields: [bannedById], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
 
   @@index([ipAddress])
 }
@@ -429,6 +433,9 @@ model RechargeTransaction {
   agentCommission   Decimal                   @db.Decimal(14, 2)
   agencyCommission  Decimal                   @db.Decimal(14, 2)
   platformShare     Decimal                   @db.Decimal(14, 2)
+  packageId         String?
+  goldCredited      Decimal?                  @db.Decimal(14, 2)
+  bonusPercent      Decimal?                  @db.Decimal(5, 2)
   status            RechargeTransactionStatus @default(SUCCESS)
   ipAddress         String?
   device            String?
@@ -450,6 +457,20 @@ model CommissionSettings {
   largeTransactionAlert Decimal  @default(1000) @db.Decimal(14, 2)
   goldPerCurrencyUnit   Decimal  @default(100) @db.Decimal(10, 2)
   updatedAt             DateTime @updatedAt
+}
+
+model RechargePackage {
+  id           String   @id @default(uuid())
+  priceUsd     Decimal  @db.Decimal(10, 2)
+  baseGold     Decimal  @db.Decimal(14, 2)
+  bonusPercent Decimal  @default(0) @db.Decimal(5, 2)
+  totalGold    Decimal  @db.Decimal(14, 2)
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
 }
 
 // ---------------------------------------------------------------------------
@@ -705,7 +726,15 @@ model HostAgency {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members HostAgencyMember[]
+  isPremium             Boolean  @default(false)
+  monthlyTargetDiamonds Decimal? @db.Decimal(14, 2)
+  monthlyDiamonds       Decimal  @default(0) @db.Decimal(14, 2)
+  monthKey              String?
+  commissionBalance     Decimal  @default(0) @db.Decimal(14, 2)
+
+  members            HostAgencyMember[]
+  withdrawalRequests AgencyWithdrawalRequest[]
+  commissionEntries  HostAgencyCommissionEntry[]
 
   @@index([isActive])
 }
@@ -719,7 +748,85 @@ model HostAgencyMember {
   role     HostAgencyRole @default(HOST)
   joinedAt DateTime       @default(now())
 
+  monthlyDiamonds  Decimal @default(0) @db.Decimal(14, 2)
+  lifetimeDiamonds Decimal @default(0) @db.Decimal(14, 2)
+  monthKey         String?
+
   @@index([agencyId])
+}
+
+model HostAgencyCommissionEntry {
+  id              String     @id @default(uuid())
+  agencyId        String
+  agency          HostAgency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  hostId          String
+  giftSendId      String     @unique
+  diamondsAwarded Decimal    @db.Decimal(14, 2)
+  commissionRate  Decimal    @db.Decimal(5, 2)
+  commissionUsd   Decimal    @db.Decimal(10, 2)
+  createdAt       DateTime   @default(now())
+
+  @@index([agencyId, createdAt])
+}
+
+model HostTargetTier {
+  id                String   @id @default(uuid())
+  thresholdDiamonds Decimal  @unique @db.Decimal(14, 2)
+  salaryUsd         Decimal  @db.Decimal(10, 2)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([thresholdDiamonds])
+}
+
+model HostEconomySettings {
+  id                String   @id @default("default")
+  giftHostShareRate Decimal  @default(60) @db.Decimal(5, 2)
+  agencyBaseRate    Decimal  @default(8) @db.Decimal(5, 2)
+  agencyTargetRate  Decimal  @default(10) @db.Decimal(5, 2)
+  agencyPremiumRate Decimal  @default(12) @db.Decimal(5, 2)
+  diamondToUsdRate  Decimal  @default(0.00005) @db.Decimal(10, 8)
+  updatedAt         DateTime @updatedAt
+}
+
+model HostWithdrawalRequest {
+  id             String        @id @default(uuid())
+  hostId         String
+  host           User          @relation("HostWithdrawalHost", fields: [hostId], references: [id], onDelete: Cascade)
+  diamondsAmount Decimal       @db.Decimal(14, 2)
+  usdAmount      Decimal       @db.Decimal(10, 2)
+  method         String
+  accountNumber  String
+  notes          String?
+  status         RequestStatus @default(PENDING)
+  reviewedById   String?
+  reviewer       User?         @relation("HostWithdrawalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNotes    String?
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([hostId, status])
+}
+
+model AgencyWithdrawalRequest {
+  id            String        @id @default(uuid())
+  agencyId      String
+  agency        HostAgency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  usdAmount     Decimal       @db.Decimal(10, 2)
+  method        String
+  accountNumber String
+  notes         String?
+  status        RequestStatus @default(PENDING)
+  reviewedById  String?
+  reviewer      User?         @relation("AgencyWithdrawalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNotes   String?
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([agencyId, status])
 }
 
 // ---------------------------------------------------------------------------

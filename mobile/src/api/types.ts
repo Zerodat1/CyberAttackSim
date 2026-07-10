@@ -296,6 +296,50 @@ export interface HostAgencyMembership {
   agency: HostAgencySummary;
 }
 
+export interface HostTargetTier {
+  id: string;
+  thresholdDiamonds: string;
+  salaryUsd: string;
+  sortOrder: number;
+}
+
+export interface HostWithdrawalRequest {
+  id: string;
+  hostId: string;
+  diamondsAmount: string;
+  usdAmount: string;
+  method: string;
+  accountNumber: string;
+  notes: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  createdAt: string;
+}
+
+export interface HostDashboard {
+  agency: { id: string; name: string };
+  lifetimeDiamonds: number;
+  totalGoldReceived: number;
+  monthlyDiamonds: number;
+  currentTier: { thresholdDiamonds: number; salaryUsd: number } | null;
+  nextTier: { thresholdDiamonds: number; salaryUsd: number } | null;
+  progressPercent: number;
+  expectedMonthlySalaryUsd: number;
+  withdrawableDiamonds: number;
+  withdrawableUsd: number;
+  diamondToUsdRate: number;
+  withdrawalHistory: HostWithdrawalRequest[];
+}
+
+export interface RechargePackage {
+  id: string;
+  priceUsd: string;
+  baseGold: string;
+  bonusPercent: string;
+  totalGold: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export type StoreItemCategory = "FRAME" | "ENTRANCE" | "BUBBLE" | "MIC_EFFECT";
 
 export interface StoreItem {

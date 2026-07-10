@@ -47,25 +47,42 @@ export class RechargeChargeService {
 
     const settings = await this.settings.getSettings();
 
+    let amount: number;
+    let goldCredited: number;
+    let bonusPercent: number | null = null;
+
+    if (dto.packageId) {
+      const pkg = await this.prisma.rechargePackage.findUnique({ where: { id: dto.packageId } });
+      if (!pkg || !pkg.isActive) {
+        throw new NotFoundException("Recharge package not found");
+      }
+      amount = Number(pkg.priceUsd);
+      goldCredited = Number(pkg.totalGold);
+      bonusPercent = Number(pkg.bonusPercent);
+    } else {
+      amount = dto.amount as number;
+      goldCredited = round2(amount * Number(settings.goldPerCurrencyUnit));
+    }
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const chargedToday = await this.prisma.rechargeTransaction.aggregate({
       where: { agentId, createdAt: { gte: startOfDay }, status: "SUCCESS" },
       _sum: { amount: true },
     });
-    const totalToday = Number(chargedToday._sum.amount ?? 0) + dto.amount;
+    const totalToday = Number(chargedToday._sum.amount ?? 0) + amount;
     if (totalToday > Number(settings.dailyChargeLimit)) {
       throw new BadRequestException("Daily charge limit exceeded");
     }
 
-    if (Number(agent.wallet.balance) < dto.amount) {
+    if (Number(agent.wallet.balance) < amount) {
       await this.prisma.rechargeTransaction.create({
         data: {
           transactionNumber: generateTransactionNumber(),
           idempotencyKey,
           agentId,
           targetUserId: dto.targetUserId,
-          amount: dto.amount,
+          amount,
           agentCommission: 0,
           agencyCommission: 0,
           platformShare: 0,
@@ -81,22 +98,20 @@ export class RechargeChargeService {
         agent.userId,
         "CHARGE_FAILED",
         "فشلت عملية الشحن",
-        `فشلت عملية شحن بمبلغ ${dto.amount} بسبب عدم كفاية الرصيد.`,
+        `فشلت عملية شحن بمبلغ ${amount} بسبب عدم كفاية الرصيد.`,
       );
 
       throw new BadRequestException("Insufficient agent wallet balance");
     }
 
-    const agentCommission = round2((dto.amount * Number(agent.commissionRate)) / 100);
-    const agencyCommission = round2((dto.amount * Number(agent.agency.commissionRate)) / 100);
-    const platformShare = round2(dto.amount - agentCommission - agencyCommission);
-
-    const goldCredited = round2(dto.amount * Number(settings.goldPerCurrencyUnit));
+    const agentCommission = round2((amount * Number(agent.commissionRate)) / 100);
+    const agencyCommission = round2((amount * Number(agent.agency.commissionRate)) / 100);
+    const platformShare = round2(amount - agentCommission - agencyCommission);
 
     const transaction = await this.prisma.$transaction(async (tx) => {
       await tx.rechargeWallet.update({
         where: { agentId },
-        data: { balance: { decrement: dto.amount } },
+        data: { balance: { decrement: amount } },
       });
 
       await this.wallet.creditGold(dto.targetUserId, goldCredited, tx);
@@ -107,10 +122,13 @@ export class RechargeChargeService {
           idempotencyKey,
           agentId,
           targetUserId: dto.targetUserId,
-          amount: dto.amount,
+          amount,
           agentCommission,
           agencyCommission,
           platformShare,
+          packageId: dto.packageId,
+          goldCredited,
+          bonusPercent,
           status: "SUCCESS",
           ipAddress: ctx.ipAddress,
           device: ctx.device,
@@ -119,14 +137,14 @@ export class RechargeChargeService {
         },
       });
 
-      if (dto.amount >= Number(settings.largeTransactionAlert)) {
+      if (amount >= Number(settings.largeTransactionAlert)) {
         await tx.auditLog.create({
           data: {
             actorId: agent.userId,
             action: "charge.large_transaction",
             entityType: "RechargeTransaction",
             entityId: created.id,
-            metadata: { amount: dto.amount },
+            metadata: { amount },
             ipAddress: ctx.ipAddress,
           },
         });
@@ -139,7 +157,7 @@ export class RechargeChargeService {
       agent.userId,
       "CHARGE_SUCCESS",
       "تمت عملية الشحن بنجاح",
-      `تم شحن ${dto.amount} للمستخدم بنجاح. عمولتك: ${agentCommission}.`,
+      `تم شحن ${amount} للمستخدم بنجاح. عمولتك: ${agentCommission}.`,
       { transactionId: transaction.id },
     );
 

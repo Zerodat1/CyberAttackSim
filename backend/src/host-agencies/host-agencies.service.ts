@@ -33,6 +33,19 @@ export class HostAgenciesService {
     });
   }
 
+  async adminListAgencies() {
+    return this.prisma.hostAgency.findMany({
+      select: {
+        ...AGENCY_SELECT,
+        isPremium: true,
+        monthlyTargetDiamonds: true,
+        monthlyDiamonds: true,
+        commissionBalance: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async getMyMembership(userId: string) {
     const membership = await this.prisma.hostAgencyMember.findUnique({
       where: { userId },
@@ -115,6 +128,17 @@ export class HostAgenciesService {
     await this.assertIsOwner(userId, agencyId);
     await this.prisma.hostAgency.delete({ where: { id: agencyId } });
     return { dissolved: true };
+  }
+
+  async updateAgencyEconomy(agencyId: string, dto: { isPremium?: boolean; monthlyTargetDiamonds?: number }) {
+    const agency = await this.prisma.hostAgency.findUnique({ where: { id: agencyId } });
+    if (!agency) {
+      throw new NotFoundException("Host agency not found");
+    }
+    return this.prisma.hostAgency.update({
+      where: { id: agencyId },
+      data: { isPremium: dto.isPremium, monthlyTargetDiamonds: dto.monthlyTargetDiamonds },
+    });
   }
 
   async kickMember(userId: string, agencyId: string, targetUserId: string) {

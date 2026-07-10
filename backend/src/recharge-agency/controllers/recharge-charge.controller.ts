@@ -6,6 +6,7 @@ import { RechargeAgentGuard, RechargeAgentRequest } from "../guards/recharge-age
 import { CurrentAgent } from "../decorators/current-agent.decorator";
 import { RechargeChargeService } from "../recharge-charge.service";
 import { RechargeStatsService } from "../recharge-stats.service";
+import { RechargePackagesService } from "../recharge-packages.service";
 import { ChargeUserDto } from "../dto/charge-user.dto";
 
 type Agent = RechargeAgentRequest["rechargeAgent"];
@@ -18,7 +19,13 @@ export class RechargeChargeController {
   constructor(
     private readonly chargeService: RechargeChargeService,
     private readonly statsService: RechargeStatsService,
+    private readonly packagesService: RechargePackagesService,
   ) {}
+
+  @Get("packages")
+  listPackages() {
+    return this.packagesService.listActive();
+  }
 
   @Post("charge")
   chargeUser(@CurrentAgent() agent: Agent, @Body() dto: ChargeUserDto, @Req() req: Request) {

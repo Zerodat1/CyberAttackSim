@@ -26,6 +26,8 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import GppBadIcon from "@mui/icons-material/GppBad";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SavingsIcon from "@mui/icons-material/Savings";
+import GroupsIcon from "@mui/icons-material/Groups";
 import { useAuth } from "@/auth/AuthContext";
 import { GlobalRole } from "@/api/types";
 
@@ -52,6 +54,8 @@ const NAV_ITEMS: { to: string; label: string; icon: JSX.Element; roles: GlobalRo
   { to: "/games", label: "ألعاب الرهان", icon: <CasinoIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/store", label: "متجر المظاهر", icon: <StorefrontIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/vip", label: "مستويات VIP", icon: <WorkspacePremiumIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/economy", label: "الاقتصاد", icon: <SavingsIcon />, roles: ["OWNER"] },
+  { to: "/host-agencies", label: "وكالات المضيفين", icon: <GroupsIcon />, roles: ["OWNER"] },
   { to: "/admins", label: "إدارة الأدمن", icon: <PersonAddAlt1Icon />, roles: ["OWNER"] },
   { to: "/users", label: "إدارة المستخدمين", icon: <GppBadIcon />, roles: ["OWNER"] },
   { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },

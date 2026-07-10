@@ -7,7 +7,7 @@ import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { colors, radii, spacing } from "@/theme";
-import type { HostAgencyDetail } from "@/api/types";
+import type { HostAgencyDetail, HostDashboard, HostTargetTier } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "HostAgencyDetail">;
@@ -20,10 +20,25 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState("");
+  const [withdrawAccount, setWithdrawAccount] = useState("");
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   const { data: agency, isLoading } = useQuery({
     queryKey: ["host-agency-detail", agencyId],
     queryFn: async () => (await apiClient.get<HostAgencyDetail>(`/host-agencies/${agencyId}`)).data,
+  });
+
+  const { data: dashboard } = useQuery({
+    queryKey: ["host-dashboard"],
+    queryFn: async () => (await apiClient.get<HostDashboard>("/host-agencies/me/dashboard")).data,
+  });
+
+  const { data: tiers } = useQuery({
+    queryKey: ["host-target-tiers"],
+    queryFn: async () => (await apiClient.get<HostTargetTier[]>("/host-agencies/target-tiers")).data,
   });
 
   useEffect(() => {
@@ -72,6 +87,24 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
     },
   });
 
+  const withdrawMutation = useMutation({
+    mutationFn: async () =>
+      apiClient.post("/host-agencies/withdrawals", {
+        diamondsAmount: Number(withdrawAmount),
+        method: withdrawMethod,
+        accountNumber: withdrawAccount,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["host-dashboard"] });
+      setWithdrawing(false);
+      setWithdrawAmount("");
+      setWithdrawMethod("");
+      setWithdrawAccount("");
+      setWithdrawError(null);
+    },
+    onError: (err: any) => setWithdrawError(err?.response?.data?.message ?? "تعذر إرسال طلب الفك"),
+  });
+
   if (isLoading || !agency) {
     return (
       <View style={styles.center}>
@@ -92,6 +125,99 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
       </LinearGradient>
 
       <View style={styles.body}>
+        {dashboard && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>التاركت الشهري</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{dashboard.monthlyDiamonds.toLocaleString("en")}</Text>
+                <Text style={styles.statLabel}>ألماس هذا الشهر</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{dashboard.expectedMonthlySalaryUsd}$</Text>
+                <Text style={styles.statLabel}>الراتب الشهري المتوقع</Text>
+              </View>
+            </View>
+
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${dashboard.progressPercent}%` }]} />
+            </View>
+            <Text style={styles.progressLabel}>
+              {dashboard.currentTier
+                ? `المستوى الحالي: ${dashboard.currentTier.thresholdDiamonds.toLocaleString("en")} ألماسة (${dashboard.currentTier.salaryUsd}$)`
+                : "لم تصل لأول مستوى تاركت بعد"}
+              {dashboard.nextTier
+                ? ` — التالي: ${dashboard.nextTier.thresholdDiamonds.toLocaleString("en")} ألماسة`
+                : ""}
+            </Text>
+
+            {tiers && tiers.length > 0 && (
+              <View style={styles.tierTable}>
+                {tiers.map((tier) => {
+                  const threshold = Number(tier.thresholdDiamonds);
+                  const reached = dashboard.monthlyDiamonds >= threshold;
+                  return (
+                    <View key={tier.id} style={[styles.tierRow, reached && styles.tierRowReached]}>
+                      <Text style={[styles.tierSalary, reached && styles.tierTextReached]}>{tier.salaryUsd}$</Text>
+                      <Text style={[styles.tierThreshold, reached && styles.tierTextReached]}>
+                        {threshold.toLocaleString("en")} ألماسة {reached ? "✓" : ""}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{dashboard.withdrawableDiamonds.toLocaleString("en")}</Text>
+                <Text style={styles.statLabel}>ألماس قابل للفك</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{dashboard.withdrawableUsd}$</Text>
+                <Text style={styles.statLabel}>القيمة بالدولار</Text>
+              </View>
+            </View>
+
+            {!withdrawing ? (
+              <TouchableOpacity style={styles.button} onPress={() => setWithdrawing(true)}>
+                <Text style={styles.buttonText}>فك الألماس</Text>
+              </TouchableOpacity>
+            ) : (
+              <View>
+                <Text style={styles.fieldLabel}>عدد الألماس</Text>
+                <TextInput
+                  style={styles.input}
+                  value={withdrawAmount}
+                  onChangeText={setWithdrawAmount}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.fieldLabel}>طريقة الاستلام</Text>
+                <TextInput style={styles.input} value={withdrawMethod} onChangeText={setWithdrawMethod} />
+                <Text style={styles.fieldLabel}>رقم الحساب</Text>
+                <TextInput style={styles.input} value={withdrawAccount} onChangeText={setWithdrawAccount} />
+                {withdrawError && <Text style={styles.error}>{withdrawError}</Text>}
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[styles.button, { flex: 1 }]}
+                    disabled={!withdrawAmount || !withdrawMethod || !withdrawAccount || withdrawMutation.isPending}
+                    onPress={() => withdrawMutation.mutate()}
+                  >
+                    {withdrawMutation.isPending ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>إرسال الطلب</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.buttonSecondary, { flex: 1 }]} onPress={() => setWithdrawing(false)}>
+                    <Text style={styles.buttonText}>إلغاء</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {isOwner && !editing && (
           <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
             <Text style={styles.buttonText}>تعديل بيانات الوكالة</Text>
@@ -217,4 +343,42 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: { color: colors.danger, fontWeight: "700" },
   error: { color: colors.danger, textAlign: "center", marginTop: spacing.sm },
+  statsRow: { flexDirection: "row-reverse", gap: spacing.md, marginBottom: spacing.md },
+  statBox: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    alignItems: "center",
+  },
+  statValue: { color: colors.textPrimary, fontWeight: "800", fontSize: 17 },
+  statLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 4, textAlign: "center" },
+  progressTrack: {
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceMuted,
+    overflow: "hidden",
+    marginBottom: spacing.sm,
+  },
+  progressFill: { height: "100%", backgroundColor: colors.primary, borderRadius: radii.pill },
+  progressLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    textAlign: "right",
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+  tierTable: { marginBottom: spacing.md, gap: spacing.xs },
+  tierRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    backgroundColor: colors.background,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  tierRowReached: { backgroundColor: "rgba(76,217,100,0.14)" },
+  tierThreshold: { color: colors.textSecondary, fontSize: 12 },
+  tierSalary: { color: colors.textPrimary, fontWeight: "700", fontSize: 12 },
+  tierTextReached: { color: colors.success },
 });

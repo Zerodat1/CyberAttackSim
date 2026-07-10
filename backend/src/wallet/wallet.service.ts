@@ -35,6 +35,17 @@ export class WalletService {
     return tx.userWallet.update({ where: { userId }, data: { diamondBalance: { increment: amount } } });
   }
 
+  async debitDiamond(userId: string, amount: number, tx: Prisma.TransactionClient = this.prisma) {
+    await this.ensureWallet(userId, tx);
+    const result = await tx.userWallet.updateMany({
+      where: { userId, diamondBalance: { gte: amount } },
+      data: { diamondBalance: { decrement: amount } },
+    });
+    if (result.count === 0) {
+      throw new BadRequestException("Insufficient diamond balance");
+    }
+  }
+
   private async ensureWallet(userId: string, tx: Prisma.TransactionClient) {
     await tx.userWallet.upsert({ where: { userId }, update: {}, create: { userId } });
   }

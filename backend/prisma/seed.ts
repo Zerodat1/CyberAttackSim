@@ -10,6 +10,42 @@ async function main() {
     create: { id: "default" },
   });
 
+  await prisma.hostEconomySettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default" },
+  });
+
+  const existingPackages = await prisma.rechargePackage.count();
+  if (existingPackages === 0) {
+    const packages: { priceUsd: number; baseGold: number; bonusPercent: number; sortOrder: number }[] = [
+      { priceUsd: 1, baseGold: 10_000, bonusPercent: 0, sortOrder: 1 },
+      { priceUsd: 10, baseGold: 100_000, bonusPercent: 5, sortOrder: 2 },
+      { priceUsd: 50, baseGold: 500_000, bonusPercent: 10, sortOrder: 3 },
+      { priceUsd: 100, baseGold: 1_000_000, bonusPercent: 15, sortOrder: 4 },
+      { priceUsd: 500, baseGold: 5_000_000, bonusPercent: 20, sortOrder: 5 },
+    ];
+    await prisma.rechargePackage.createMany({
+      data: packages.map((p) => ({
+        ...p,
+        totalGold: p.baseGold * (1 + p.bonusPercent / 100),
+      })),
+    });
+  }
+
+  const existingTiers = await prisma.hostTargetTier.count();
+  if (existingTiers === 0) {
+    await prisma.hostTargetTier.createMany({
+      data: [
+        { thresholdDiamonds: 1_000_000, salaryUsd: 50, sortOrder: 1 },
+        { thresholdDiamonds: 3_000_000, salaryUsd: 150, sortOrder: 2 },
+        { thresholdDiamonds: 6_000_000, salaryUsd: 350, sortOrder: 3 },
+        { thresholdDiamonds: 10_000_000, salaryUsd: 650, sortOrder: 4 },
+        { thresholdDiamonds: 20_000_000, salaryUsd: 1500, sortOrder: 5 },
+      ],
+    });
+  }
+
   const ownerEmail = process.env.SEED_OWNER_EMAIL || "owner@code.app";
   const ownerPassword = process.env.SEED_OWNER_PASSWORD || "ChangeMe123!";
 
