@@ -18,6 +18,7 @@ const STAT_TILES: { key: keyof AgentDashboard; label: string; icon: string; suff
   { key: "totalCommissionEarned", label: "إجمالي العمولات", icon: "💵", suffix: "$" },
   { key: "frozenBalance", label: "الرصيد المجمد", icon: "🧊", suffix: "$" },
   { key: "pendingWithdrawals", label: "طلبات سحب معلقة", icon: "⏳", suffix: "$" },
+  { key: "diamondBalance", label: "ألماس من المضيفين", icon: "💎" },
 ];
 
 function StatTile({ icon, label, value }: { icon: string; label: string; value: string | number }) {

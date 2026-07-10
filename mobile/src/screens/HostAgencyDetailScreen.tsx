@@ -217,9 +217,14 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
             </View>
 
             {!withdrawing ? (
-              <TouchableOpacity style={styles.button} onPress={() => setWithdrawing(true)}>
-                <Text style={styles.buttonText}>فك الألماس</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity style={styles.button} onPress={() => setWithdrawing(true)}>
+                  <Text style={styles.buttonText}>فك الألماس (عبر الإدارة)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate("AgentCashout")}>
+                  <Text style={styles.buttonText}>سحب مباشر عبر وكيل شحن (بدون الإدارة)</Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <View>
                 <Text style={styles.fieldLabel}>عدد الألماس</Text>

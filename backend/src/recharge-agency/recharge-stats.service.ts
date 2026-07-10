@@ -13,8 +13,9 @@ export class RechargeStatsService {
     startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [wallet, dailyAgg, weeklyAgg, monthlyAgg, allTimeAgg, distinctCustomers, pendingWithdrawals] =
+    const [agent, wallet, dailyAgg, weeklyAgg, monthlyAgg, allTimeAgg, distinctCustomers, pendingWithdrawals] =
       await Promise.all([
+        this.prisma.rechargeAgent.findUnique({ where: { id: agentId }, select: { diamondBalance: true } }),
         this.prisma.rechargeWallet.findUnique({ where: { agentId } }),
         this.prisma.rechargeTransaction.aggregate({
           where: { agentId, status: "SUCCESS", createdAt: { gte: startOfDay } },
@@ -50,6 +51,7 @@ export class RechargeStatsService {
     return {
       availableBalance: Number(wallet?.balance ?? 0),
       frozenBalance: Number(wallet?.frozenBalance ?? 0),
+      diamondBalance: Number(agent?.diamondBalance ?? 0),
       dailyChargeTotal: Number(dailyAgg._sum.amount ?? 0),
       dailyChargeCount: dailyAgg._count,
       weeklyChargeTotal: Number(weeklyAgg._sum.amount ?? 0),

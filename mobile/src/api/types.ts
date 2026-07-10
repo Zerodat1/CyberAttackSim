@@ -53,6 +53,7 @@ export interface RechargeWallet {
 export interface AgentDashboard {
   availableBalance: number;
   frozenBalance: number;
+  diamondBalance: number;
   dailyChargeTotal: number;
   dailyChargeCount: number;
   weeklyChargeTotal: number;
