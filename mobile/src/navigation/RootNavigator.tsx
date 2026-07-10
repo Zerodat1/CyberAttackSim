@@ -1,5 +1,6 @@
 import { ActivityIndicator, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import * as Linking from "expo-linking";
+import { NavigationContainer, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "@/auth/AuthContext";
 import { LoginScreen } from "@/screens/LoginScreen";
@@ -47,6 +48,32 @@ export type AppStackParamList = {
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
+
+const linking: LinkingOptions<AuthStackParamList & AppStackParamList> = {
+  prefixes: [Linking.createURL("/")],
+  config: {
+    screens: {
+      Login: "login",
+      Register: "register",
+      Home: "",
+      ApplyAgency: "apply-agency",
+      AgentDashboard: "agent-dashboard",
+      ChargeUser: "charge-user",
+      WithdrawalRequest: "withdrawal-request",
+      RoomsList: "rooms",
+      Room: "rooms/:roomId",
+      ConversationsList: "chats",
+      Chat: "chats/:conversationId",
+      Profile: "profile",
+      GiftHistory: "gift-history",
+      GameHistory: "game-history",
+      HostAgencies: "host-agencies",
+      HostAgencyDetail: "host-agencies/:agencyId",
+      Store: "store",
+      Vip: "vip",
+    },
+  },
+};
 
 function AuthNavigator() {
   return (
@@ -107,5 +134,5 @@ export function RootNavigator() {
     );
   }
 
-  return <NavigationContainer>{user ? <AppNavigator /> : <AuthNavigator />}</NavigationContainer>;
+  return <NavigationContainer linking={linking}>{user ? <AppNavigator /> : <AuthNavigator />}</NavigationContainer>;
 }
