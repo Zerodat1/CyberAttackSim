@@ -21,6 +21,7 @@ import { HostAgenciesScreen } from "@/screens/HostAgenciesScreen";
 import { HostAgencyDetailScreen } from "@/screens/HostAgencyDetailScreen";
 import { StoreScreen } from "@/screens/StoreScreen";
 import { VipScreen } from "@/screens/VipScreen";
+import { WalletScreen } from "@/screens/WalletScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -44,6 +45,7 @@ export type AppStackParamList = {
   HostAgencyDetail: { agencyId: string };
   Store: undefined;
   Vip: undefined;
+  Wallet: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -71,6 +73,7 @@ const linking: LinkingOptions<AuthStackParamList & AppStackParamList> = {
       HostAgencyDetail: "host-agencies/:agencyId",
       Store: "store",
       Vip: "vip",
+      Wallet: "wallet",
     },
   },
 };
@@ -119,6 +122,7 @@ function AppNavigator() {
       <AppStack.Screen name="HostAgencyDetail" component={HostAgencyDetailScreen} options={{ title: "الوكالة" }} />
       <AppStack.Screen name="Store" component={StoreScreen} options={{ title: "المتجر" }} />
       <AppStack.Screen name="Vip" component={VipScreen} options={{ title: "VIP" }} />
+      <AppStack.Screen name="Wallet" component={WalletScreen} options={{ title: "محفظتي" }} />
     </AppStack.Navigator>
   );
 }

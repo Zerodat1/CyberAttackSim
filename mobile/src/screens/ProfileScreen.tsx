@@ -38,6 +38,7 @@ const GENDER_LABEL: Record<Gender, string> = {
 const MENU_ITEMS = [
   { icon: "🎙️", label: "الغرف الصوتية", screen: "RoomsList" as const },
   { icon: "💬", label: "الرسائل", screen: "ConversationsList" as const },
+  { icon: "👛", label: "محفظتي", screen: "Wallet" as const },
   { icon: "🛍️", label: "المتجر", screen: "Store" as const },
   { icon: "👑", label: "VIP", screen: "Vip" as const },
   { icon: "🎁", label: "سجل الهدايا", screen: "GiftHistory" as const },

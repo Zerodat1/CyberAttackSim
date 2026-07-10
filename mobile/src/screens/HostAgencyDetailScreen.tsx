@@ -7,10 +7,17 @@ import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { colors, radii, spacing } from "@/theme";
-import type { HostAgencyDetail, HostDashboard, HostTargetTier } from "@/api/types";
+import type { AgencyEarningsDashboard, HostAgencyDetail, HostDashboard, HostTargetTier } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "HostAgencyDetail">;
+
+const WITHDRAWAL_STATUS_LABEL: Record<string, string> = {
+  PENDING: "قيد المراجعة",
+  APPROVED: "مقبولة",
+  COMPLETED: "مكتملة",
+  REJECTED: "مرفوضة",
+};
 
 export function HostAgencyDetailScreen({ route, navigation }: Props) {
   const { agencyId } = route.params;
@@ -25,10 +32,24 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
   const [withdrawMethod, setWithdrawMethod] = useState("");
   const [withdrawAccount, setWithdrawAccount] = useState("");
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [agencyWithdrawing, setAgencyWithdrawing] = useState(false);
+  const [agencyWithdrawAmount, setAgencyWithdrawAmount] = useState("");
+  const [agencyWithdrawMethod, setAgencyWithdrawMethod] = useState("");
+  const [agencyWithdrawAccount, setAgencyWithdrawAccount] = useState("");
+  const [agencyWithdrawError, setAgencyWithdrawError] = useState<string | null>(null);
 
   const { data: agency, isLoading } = useQuery({
     queryKey: ["host-agency-detail", agencyId],
     queryFn: async () => (await apiClient.get<HostAgencyDetail>(`/host-agencies/${agencyId}`)).data,
+  });
+
+  const isOwner = agency?.owner.id === user?.id;
+
+  const { data: agencyDashboard } = useQuery({
+    queryKey: ["agency-dashboard", agencyId],
+    queryFn: async () =>
+      (await apiClient.get<AgencyEarningsDashboard>(`/host-agencies/${agencyId}/dashboard`)).data,
+    enabled: isOwner,
   });
 
   const { data: dashboard } = useQuery({
@@ -47,8 +68,6 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
       setDescription(agency.description ?? "");
     }
   }, [agency]);
-
-  const isOwner = agency?.owner.id === user?.id;
 
   function invalidateAll() {
     queryClient.invalidateQueries({ queryKey: ["host-agency-detail", agencyId] });
@@ -103,6 +122,24 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
       setWithdrawError(null);
     },
     onError: (err: any) => setWithdrawError(err?.response?.data?.message ?? "تعذر إرسال طلب الفك"),
+  });
+
+  const agencyWithdrawMutation = useMutation({
+    mutationFn: async () =>
+      apiClient.post(`/host-agencies/${agencyId}/withdrawals`, {
+        usdAmount: Number(agencyWithdrawAmount),
+        method: agencyWithdrawMethod,
+        accountNumber: agencyWithdrawAccount,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-dashboard", agencyId] });
+      setAgencyWithdrawing(false);
+      setAgencyWithdrawAmount("");
+      setAgencyWithdrawMethod("");
+      setAgencyWithdrawAccount("");
+      setAgencyWithdrawError(null);
+    },
+    onError: (err: any) => setAgencyWithdrawError(err?.response?.data?.message ?? "تعذر إرسال طلب السحب"),
   });
 
   if (isLoading || !agency) {
@@ -210,6 +247,101 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonSecondary, { flex: 1 }]} onPress={() => setWithdrawing(false)}>
+                    <Text style={styles.buttonText}>إلغاء</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {dashboard.withdrawalHistory.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>سجل عمليات الفك</Text>
+                {dashboard.withdrawalHistory.map((req) => (
+                  <View key={req.id} style={styles.hostIncomeRow}>
+                    <Text style={styles.hostIncomeName}>
+                      {WITHDRAWAL_STATUS_LABEL[req.status] ?? req.status}
+                    </Text>
+                    <Text style={styles.hostIncomeValue}>
+                      {Number(req.diamondsAmount).toLocaleString("en")} ألماسة ({req.usdAmount}$)
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+
+        {isOwner && agencyDashboard && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>أرباح الوكالة</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{agencyDashboard.effectiveCommissionRate}%</Text>
+                <Text style={styles.statLabel}>نسبة العمولة الحالية</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{agencyDashboard.commissionBalance.toFixed(2)}$</Text>
+                <Text style={styles.statLabel}>رصيد قابل للسحب</Text>
+              </View>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{agencyDashboard.dailyProfitUsd.toFixed(2)}$</Text>
+                <Text style={styles.statLabel}>أرباح اليوم</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{agencyDashboard.monthlyProfitUsd.toFixed(2)}$</Text>
+                <Text style={styles.statLabel}>أرباح الشهر</Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>دخل كل مضيف هذا الشهر</Text>
+            {agencyDashboard.hosts.map((host) => (
+              <View key={host.userId} style={styles.hostIncomeRow}>
+                <Text style={styles.hostIncomeName}>{host.fullName}</Text>
+                <Text style={styles.hostIncomeValue}>{host.monthlyDiamonds.toLocaleString("en")} ألماسة</Text>
+              </View>
+            ))}
+
+            {!agencyWithdrawing ? (
+              <TouchableOpacity style={styles.button} onPress={() => setAgencyWithdrawing(true)}>
+                <Text style={styles.buttonText}>سحب رصيد العمولة</Text>
+              </TouchableOpacity>
+            ) : (
+              <View>
+                <Text style={styles.fieldLabel}>المبلغ ($)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={agencyWithdrawAmount}
+                  onChangeText={setAgencyWithdrawAmount}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.fieldLabel}>طريقة الاستلام</Text>
+                <TextInput style={styles.input} value={agencyWithdrawMethod} onChangeText={setAgencyWithdrawMethod} />
+                <Text style={styles.fieldLabel}>رقم الحساب</Text>
+                <TextInput style={styles.input} value={agencyWithdrawAccount} onChangeText={setAgencyWithdrawAccount} />
+                {agencyWithdrawError && <Text style={styles.error}>{agencyWithdrawError}</Text>}
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[styles.button, { flex: 1 }]}
+                    disabled={
+                      !agencyWithdrawAmount ||
+                      !agencyWithdrawMethod ||
+                      !agencyWithdrawAccount ||
+                      agencyWithdrawMutation.isPending
+                    }
+                    onPress={() => agencyWithdrawMutation.mutate()}
+                  >
+                    {agencyWithdrawMutation.isPending ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>إرسال الطلب</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.buttonSecondary, { flex: 1 }]}
+                    onPress={() => setAgencyWithdrawing(false)}
+                  >
                     <Text style={styles.buttonText}>إلغاء</Text>
                   </TouchableOpacity>
                 </View>
@@ -381,4 +513,11 @@ const styles = StyleSheet.create({
   tierThreshold: { color: colors.textSecondary, fontSize: 12 },
   tierSalary: { color: colors.textPrimary, fontWeight: "700", fontSize: 12 },
   tierTextReached: { color: colors.success },
+  hostIncomeRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    paddingVertical: spacing.xs,
+  },
+  hostIncomeName: { color: colors.textPrimary, fontSize: 13 },
+  hostIncomeValue: { color: colors.textSecondary, fontSize: 12 },
 });

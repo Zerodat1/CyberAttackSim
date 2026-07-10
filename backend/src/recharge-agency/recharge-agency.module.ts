@@ -6,6 +6,7 @@ import { RechargeAgencyController } from "./controllers/recharge-agency.controll
 import { RechargeWalletController } from "./controllers/recharge-wallet.controller";
 import { RechargeAdminController } from "./controllers/recharge-admin.controller";
 import { RechargeChargeController } from "./controllers/recharge-charge.controller";
+import { RechargeHistoryController } from "./controllers/recharge-history.controller";
 import { RechargeApplicationsService } from "./recharge-applications.service";
 import { RechargeAgencyService } from "./recharge-agency.service";
 import { RechargeWalletService } from "./recharge-wallet.service";
@@ -22,6 +23,7 @@ import { RechargeAgentGuard } from "./guards/recharge-agent.guard";
     RechargeWalletController,
     RechargeAdminController,
     RechargeChargeController,
+    RechargeHistoryController,
   ],
   providers: [
     RechargeApplicationsService,

@@ -340,6 +340,47 @@ export interface RechargePackage {
   sortOrder: number;
 }
 
+export interface RechargeTransaction {
+  id: string;
+  transactionNumber: string;
+  amount: string;
+  goldCredited: string | null;
+  bonusPercent: string | null;
+  status: "SUCCESS" | "FAILED" | "REVERSED";
+  createdAt: string;
+}
+
+export interface AgencyEarningsDashboard {
+  agencyId: string;
+  name: string;
+  isPremium: boolean;
+  monthlyTargetDiamonds: number | null;
+  monthlyDiamonds: number;
+  effectiveCommissionRate: number;
+  commissionBalance: number;
+  dailyProfitUsd: number;
+  monthlyProfitUsd: number;
+  hostsCount: number;
+  hosts: {
+    userId: string;
+    username: string;
+    fullName: string;
+    avatarUrl: string | null;
+    role: "OWNER" | "HOST";
+    monthlyDiamonds: number;
+    lifetimeDiamonds: number;
+    currentTierSalaryUsd: number;
+  }[];
+  withdrawalHistory: {
+    id: string;
+    usdAmount: string;
+    method: string;
+    accountNumber: string;
+    status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+    createdAt: string;
+  }[];
+}
+
 export type StoreItemCategory = "FRAME" | "ENTRANCE" | "BUBBLE" | "MIC_EFFECT";
 
 export interface StoreItem {
