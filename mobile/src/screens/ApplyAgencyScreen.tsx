@@ -15,7 +15,6 @@ export function ApplyAgencyScreen({ navigation }: Props) {
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [paymentMethods, setPaymentMethods] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +30,7 @@ export function ApplyAgencyScreen({ navigation }: Props) {
         city,
         phone,
         email,
-        paymentMethods: paymentMethods.split(",").map((m) => m.trim()).filter(Boolean),
+        paymentMethods: ["USDT"],
         termsAccepted,
       });
       navigation.goBack();
@@ -73,12 +72,12 @@ export function ApplyAgencyScreen({ navigation }: Props) {
           onChangeText={setEmail}
           autoCapitalize="none"
         />
-        <FormField
-          label="وسائل الدفع المتوفرة"
-          placeholder="فيزا، تحويل بنكي، ..."
-          value={paymentMethods}
-          onChangeText={setPaymentMethods}
-        />
+        <View style={styles.paymentField}>
+          <Text style={styles.paymentLabel}>وسائل الدفع المتوفرة</Text>
+          <View style={styles.paymentChip}>
+            <Text style={styles.paymentChipText}>USDT</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.switchRow}>
@@ -120,6 +119,25 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surfaceAlt, borderRadius: radii.xl, padding: spacing.lg, marginBottom: spacing.lg },
   row: { flexDirection: "row-reverse", gap: spacing.md },
   half: { flex: 1 },
+  paymentField: { marginBottom: spacing.md },
+  paymentLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    textAlign: "right",
+    marginBottom: spacing.xs,
+  },
+  paymentChip: {
+    alignSelf: "flex-end",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    backgroundColor: "rgba(38,201,132,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(38,201,132,0.4)",
+    borderRadius: radii.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+  },
+  paymentChipText: { color: colors.success, fontWeight: "700", fontSize: 14 },
   switchRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
