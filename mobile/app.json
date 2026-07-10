@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "app.code.mobile"
-    }
+    },
+    "plugins": ["expo-notifications"]
   }
 }

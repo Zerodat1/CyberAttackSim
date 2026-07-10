@@ -33,6 +33,7 @@ import type {
 } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 import { resolveFrame, resolveVipBadge } from "@/utils/cosmetics";
+import { joinVoiceChannel, leaveVoiceChannel, setVoiceMuted } from "@/services/voiceService";
 
 const GAME_ICON: Record<GameType, string> = {
   DICE_GUESS: "🎲",
@@ -121,8 +122,10 @@ export function RoomScreen({ route, navigation }: Props) {
   });
 
   const toggleMicMutation = useMutation({
-    mutationFn: async ({ seatNumber, muted }: { seatNumber: number; muted: boolean }) =>
-      apiClient.patch(`/rooms/${roomId}/seats/${seatNumber}/mute`, { muted }),
+    mutationFn: async ({ seatNumber, muted }: { seatNumber: number; muted: boolean }) => {
+      await setVoiceMuted(muted);
+      return apiClient.patch(`/rooms/${roomId}/seats/${seatNumber}/mute`, { muted });
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["room", roomId] }),
   });
 
@@ -166,6 +169,16 @@ export function RoomScreen({ route, navigation }: Props) {
       setJoined(true);
     }
   }, [room, user]);
+
+  const hasSeat = !!room?.seats.some((s) => s.occupantId === user?.id);
+
+  useEffect(() => {
+    if (!joined) return;
+    joinVoiceChannel(roomId, hasSeat);
+    return () => {
+      leaveVoiceChannel();
+    };
+  }, [roomId, joined, hasSeat]);
 
   if (isLoading || !room) {
     return (

@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 import { secureStorage } from "@/api/storage";
 import { apiClient, onSessionExpired, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/api/client";
 import { AuthUser } from "@/api/types";
+import { registerForPushNotificationsAsync, unregisterPushNotificationsAsync } from "@/utils/pushNotifications";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -48,6 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => onSessionExpired(() => setUser(null)), []);
 
+  useEffect(() => {
+    if (user) {
+      registerForPushNotificationsAsync().catch(() => {});
+    }
+  }, [user?.id]);
+
   async function login(identifier: string, password: string) {
     const { data } = await apiClient.post("/auth/login", { identifier, password });
     await storeSession(data.accessToken, data.refreshToken);
@@ -67,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logout() {
     try {
+      await unregisterPushNotificationsAsync();
       await apiClient.post("/auth/logout");
     } finally {
       await secureStorage.deleteItemAsync(ACCESS_TOKEN_KEY);
