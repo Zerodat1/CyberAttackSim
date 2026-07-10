@@ -10,7 +10,6 @@ type Props = NativeStackScreenProps<AppStackParamList, "ApplyAgency">;
 
 export function ApplyAgencyScreen({ navigation }: Props) {
   const [fullName, setFullName] = useState("");
-  const [agencyName, setAgencyName] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
@@ -25,7 +24,7 @@ export function ApplyAgencyScreen({ navigation }: Props) {
     try {
       await apiClient.post("/recharge-agency/applications", {
         fullName,
-        agencyName,
+        agencyName: fullName,
         country,
         city,
         phone,
@@ -49,7 +48,6 @@ export function ApplyAgencyScreen({ navigation }: Props) {
 
       <View style={styles.card}>
         <FormField label="الاسم الكامل" placeholder="مثال: محمد أحمد" value={fullName} onChangeText={setFullName} />
-        <FormField label="اسم الوكالة" placeholder="اسم وكالتك التجاري" value={agencyName} onChangeText={setAgencyName} />
         <View style={styles.row}>
           <View style={styles.half}>
             <FormField label="الدولة" placeholder="الدولة" value={country} onChangeText={setCountry} />
