@@ -22,6 +22,8 @@ import { HostAgencyDetailScreen } from "@/screens/HostAgencyDetailScreen";
 import { StoreScreen } from "@/screens/StoreScreen";
 import { VipScreen } from "@/screens/VipScreen";
 import { WalletScreen } from "@/screens/WalletScreen";
+import { AgentCashoutScreen } from "@/screens/AgentCashoutScreen";
+import { AgentCashoutInboxScreen } from "@/screens/AgentCashoutInboxScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -46,6 +48,8 @@ export type AppStackParamList = {
   Store: undefined;
   Vip: undefined;
   Wallet: undefined;
+  AgentCashout: undefined;
+  AgentCashoutInbox: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -74,6 +78,8 @@ const linking: LinkingOptions<AuthStackParamList & AppStackParamList> = {
       Store: "store",
       Vip: "vip",
       Wallet: "wallet",
+      AgentCashout: "agent-cashout",
+      AgentCashoutInbox: "agent-cashout-inbox",
     },
   },
 };
@@ -123,6 +129,12 @@ function AppNavigator() {
       <AppStack.Screen name="Store" component={StoreScreen} options={{ title: "المتجر" }} />
       <AppStack.Screen name="Vip" component={VipScreen} options={{ title: "VIP" }} />
       <AppStack.Screen name="Wallet" component={WalletScreen} options={{ title: "محفظتي" }} />
+      <AppStack.Screen name="AgentCashout" component={AgentCashoutScreen} options={{ title: "سحب عبر وكيل شحن" }} />
+      <AppStack.Screen
+        name="AgentCashoutInbox"
+        component={AgentCashoutInboxScreen}
+        options={{ title: "طلبات سحب المضيفين" }}
+      />
     </AppStack.Navigator>
   );
 }

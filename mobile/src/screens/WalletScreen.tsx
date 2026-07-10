@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
 import { colors, radii, spacing } from "@/theme";
 import type { RechargePackage, RechargeTransaction } from "@/api/types";
+import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 const STATUS_LABEL: Record<string, string> = {
   SUCCESS: "ناجحة",
@@ -11,7 +13,9 @@ const STATUS_LABEL: Record<string, string> = {
   REVERSED: "مسترجعة",
 };
 
-export function WalletScreen() {
+type Props = NativeStackScreenProps<AppStackParamList, "Wallet">;
+
+export function WalletScreen({ navigation }: Props) {
   const { data: wallet } = useQuery({
     queryKey: ["wallet"],
     queryFn: async () => (await apiClient.get<{ goldBalance: string; diamondBalance: string }>("/wallet/me")).data,
@@ -46,6 +50,10 @@ export function WalletScreen() {
               <Text style={styles.walletLabel}>ألماس 💎</Text>
             </View>
           </LinearGradient>
+
+          <TouchableOpacity style={styles.cashoutButton} onPress={() => navigation.navigate("AgentCashout")}>
+            <Text style={styles.cashoutButtonText}>سحب الألماس عبر وكيل شحن ‹</Text>
+          </TouchableOpacity>
 
           <Text style={styles.sectionTitle}>باقات الشحن المتوفرة</Text>
           <Text style={styles.sectionSubtitle}>توجه لأحد وكلاء الشحن لاختيار إحدى هذه الباقات — البونص يُضاف تلقائيًا</Text>
@@ -112,6 +120,14 @@ const styles = StyleSheet.create({
   walletDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.2)" },
   walletValue: { color: "#fff", fontSize: 22, fontWeight: "800" },
   walletLabel: { color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 4 },
+  cashoutButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  cashoutButtonText: { color: colors.diamond, fontWeight: "700", fontSize: 13 },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 16,

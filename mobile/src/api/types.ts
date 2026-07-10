@@ -431,3 +431,39 @@ export interface VipStatus {
   isActive: boolean;
   current: VipLevel | null;
 }
+
+export type HostAgentWithdrawalStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "PAID"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED"
+  | "REFUNDED";
+
+export interface AvailableCashoutAgent {
+  id: string;
+  user: { id: string; username: string; fullName: string; avatarUrl: string | null };
+  agencyName: string;
+}
+
+export interface HostAgentWithdrawalRequest {
+  id: string;
+  hostId: string;
+  rechargeAgentId: string;
+  diamondsAmount: string;
+  usdAmount: string;
+  payoutMethod: string;
+  payoutAccount: string;
+  status: HostAgentWithdrawalStatus;
+  proofUrl: string | null;
+  paymentReference: string | null;
+  rejectionReason: string | null;
+  acceptedAt: string | null;
+  paidAt: string | null;
+  completedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  rechargeAgent?: { user: { id: string; username: string; fullName: string } };
+  host?: { id: string; username: string; fullName: string; avatarUrl: string | null };
+}

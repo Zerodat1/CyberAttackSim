@@ -68,6 +68,9 @@ export function AgentDashboardScreen({ navigation }: Props) {
       <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate("WithdrawalRequest")}>
         <Text style={styles.buttonSecondaryText}>طلب سحب أرباح</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate("AgentCashoutInbox")}>
+        <Text style={styles.buttonSecondaryText}>طلبات سحب المضيفين</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.buttonGhost} onPress={() => refetch()} disabled={isRefetching}>
         {isRefetching ? (
           <ActivityIndicator color={colors.textSecondary} />

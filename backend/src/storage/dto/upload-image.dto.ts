@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsString, Matches, MaxLength } from "class-validator";
 
-const ALLOWED_PREFIXES = ["avatars", "id-documents", "room-covers"] as const;
+const ALLOWED_PREFIXES = ["avatars", "id-documents", "room-covers", "withdrawal-proofs"] as const;
 export type UploadPrefix = (typeof ALLOWED_PREFIXES)[number];
 
 export class UploadImageDto {

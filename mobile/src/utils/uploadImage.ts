@@ -1,6 +1,6 @@
 import { apiClient } from "@/api/client";
 
-export type UploadPurpose = "avatars" | "id-documents" | "room-covers";
+export type UploadPurpose = "avatars" | "id-documents" | "room-covers" | "withdrawal-proofs";
 
 /**
  * Uploads a base64 image data URI to the backend, which forwards it to

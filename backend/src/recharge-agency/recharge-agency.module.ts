@@ -34,5 +34,6 @@ import { RechargeAgentGuard } from "./guards/recharge-agent.guard";
     RechargeStatsService,
     RechargeAgentGuard,
   ],
+  exports: [RechargeAgentGuard],
 })
 export class RechargeAgencyModule {}

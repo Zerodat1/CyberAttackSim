@@ -56,6 +56,16 @@ enum RequestStatus {
   COMPLETED
 }
 
+enum HostAgentWithdrawalStatus {
+  PENDING
+  ACCEPTED
+  PAID
+  COMPLETED
+  REJECTED
+  CANCELLED
+  REFUNDED
+}
+
 enum RechargeTransactionStatus {
   SUCCESS
   FAILED
@@ -91,6 +101,13 @@ enum NotificationType {
   GIFT_RECEIVED
   GIFT_LUCKY_WIN
   GAME_WIN
+  AGENT_WITHDRAWAL_REQUESTED
+  AGENT_WITHDRAWAL_ACCEPTED
+  AGENT_WITHDRAWAL_REJECTED
+  AGENT_WITHDRAWAL_CANCELLED
+  AGENT_WITHDRAWAL_PAID
+  AGENT_WITHDRAWAL_COMPLETED
+  AGENT_WITHDRAWAL_REFUNDED
 }
 
 enum GiftType {
@@ -214,6 +231,8 @@ model User {
   hostWithdrawalRequests    HostWithdrawalRequest[]   @relation("HostWithdrawalHost")
   reviewedHostWithdrawals   HostWithdrawalRequest[]   @relation("HostWithdrawalReviewer")
   reviewedAgencyWithdrawals AgencyWithdrawalRequest[] @relation("AgencyWithdrawalReviewer")
+
+  agentWithdrawalRequests HostAgentWithdrawalRequest[] @relation("HostAgentWithdrawalHost")
 
   @@index([globalRole])
 }
@@ -359,13 +378,15 @@ model RechargeAgent {
   role           RechargeAgentRole    @default(SUB_AGENT)
   commissionRate Decimal              @default(5.0) @db.Decimal(5, 2)
   status         RechargeAgencyStatus @default(ACTIVE)
+  diamondBalance Decimal              @default(0) @db.Decimal(14, 2)
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  wallet             RechargeWallet?
-  topUpRequests      TopUpRequest[]
-  withdrawalRequests WithdrawalRequest[]
-  transactions       RechargeTransaction[]
+  wallet                      RechargeWallet?
+  topUpRequests               TopUpRequest[]
+  withdrawalRequests          WithdrawalRequest[]
+  transactions                RechargeTransaction[]
+  hostAgentWithdrawalRequests HostAgentWithdrawalRequest[]
 
   @@index([agencyId])
 }
@@ -809,6 +830,32 @@ model HostWithdrawalRequest {
   updatedAt      DateTime      @updatedAt
 
   @@index([hostId, status])
+}
+
+model HostAgentWithdrawalRequest {
+  id               String                    @id @default(uuid())
+  hostId           String
+  host             User                      @relation("HostAgentWithdrawalHost", fields: [hostId], references: [id], onDelete: Cascade)
+  rechargeAgentId  String
+  rechargeAgent    RechargeAgent             @relation(fields: [rechargeAgentId], references: [id], onDelete: Cascade)
+  diamondsAmount   Decimal                   @db.Decimal(14, 2)
+  usdAmount        Decimal                   @db.Decimal(10, 2)
+  payoutMethod     String
+  payoutAccount    String
+  status           HostAgentWithdrawalStatus @default(PENDING)
+  proofUrl         String?
+  paymentReference String?
+  rejectionReason  String?
+  acceptedAt       DateTime?
+  paidAt           DateTime?
+  completedAt      DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  @@index([hostId, status])
+  @@index([rechargeAgentId, status])
+  @@index([status, expiresAt])
 }
 
 model AgencyWithdrawalRequest {

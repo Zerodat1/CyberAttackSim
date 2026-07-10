@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { ScheduleModule } from "@nestjs/schedule";
 import { APP_GUARD } from "@nestjs/core";
 import { LoggerModule } from "nestjs-pino";
 import configuration from "./config/configuration";
@@ -24,6 +25,7 @@ import { AdminUsersModule } from "./admin-users/admin-users.module";
 import { IpBanGuard } from "./common/guards/ip-ban.guard";
 import { StorageModule } from "./storage/storage.module";
 import { HealthModule } from "./health/health.module";
+import { HostAgentWithdrawalsModule } from "./host-agent-withdrawals/host-agent-withdrawals.module";
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { HealthModule } from "./health/health.module";
       },
     }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -69,6 +72,7 @@ import { HealthModule } from "./health/health.module";
     AdminUsersModule,
     StorageModule,
     HealthModule,
+    HostAgentWithdrawalsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: IpBanGuard },
