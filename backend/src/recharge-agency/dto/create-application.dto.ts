@@ -8,6 +8,8 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   Min,
 } from "class-validator";
 
@@ -80,10 +82,13 @@ export class CreateApplicationDto {
   @Type(() => SocialLinksDto)
   socialLinks?: SocialLinksDto;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: "A base64 image data URI of the applicant's ID document" })
   @IsString()
-  idDocumentUrl?: string;
+  @MaxLength(3_000_000)
+  @Matches(/^(https?:\/\/.+|data:image\/(png|jpe?g|webp);base64,.+)$/, {
+    message: "idDocumentUrl must be a valid http(s) URL or a base64 image data URI",
+  })
+  idDocumentUrl: string;
 
   @ApiProperty({ description: "Must be true to submit the application" })
   @Equals(true)

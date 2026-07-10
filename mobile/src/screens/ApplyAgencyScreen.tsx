@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
 import { FormField } from "@/components/FormField";
@@ -15,8 +16,29 @@ export function ApplyAgencyScreen({ navigation }: Props) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [idDocumentUrl, setIdDocumentUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function pickIdDocument() {
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("يجب السماح بالوصول إلى الصور لرفع صورة الهوية");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true,
+    });
+    const asset = result.canceled ? null : result.assets[0];
+    if (asset?.base64) {
+      const mime = asset.mimeType ?? "image/jpeg";
+      setIdDocumentUrl(`data:${mime};base64,${asset.base64}`);
+    }
+  }
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -30,6 +52,7 @@ export function ApplyAgencyScreen({ navigation }: Props) {
         phone,
         email,
         paymentMethods: ["USDT"],
+        idDocumentUrl,
         termsAccepted,
       });
       navigation.goBack();
@@ -76,6 +99,19 @@ export function ApplyAgencyScreen({ navigation }: Props) {
             <Text style={styles.paymentChipText}>USDT</Text>
           </View>
         </View>
+        <View style={styles.idField}>
+          <Text style={styles.paymentLabel}>صورة الهوية</Text>
+          <TouchableOpacity style={styles.idUpload} onPress={pickIdDocument}>
+            {idDocumentUrl ? (
+              <Image source={{ uri: idDocumentUrl }} style={styles.idPreview} resizeMode="cover" />
+            ) : (
+              <>
+                <Text style={styles.idUploadIcon}>🪪</Text>
+                <Text style={styles.idUploadText}>اضغط لرفع صورة هوية وكيل الشحن</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.switchRow}>
@@ -94,9 +130,9 @@ export function ApplyAgencyScreen({ navigation }: Props) {
       )}
 
       <TouchableOpacity
-        style={[styles.button, (!termsAccepted || submitting) && styles.buttonDisabled]}
+        style={[styles.button, (!termsAccepted || !idDocumentUrl || submitting) && styles.buttonDisabled]}
         onPress={handleSubmit}
-        disabled={!termsAccepted || submitting}
+        disabled={!termsAccepted || !idDocumentUrl || submitting}
       >
         {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>إرسال الطلب</Text>}
       </TouchableOpacity>
@@ -136,6 +172,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   paymentChipText: { color: colors.success, fontWeight: "700", fontSize: 14 },
+  idField: { marginTop: spacing.sm },
+  idUpload: {
+    height: 140,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.textMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  idUploadIcon: { fontSize: 28, marginBottom: spacing.xs },
+  idUploadText: { color: colors.textSecondary, fontSize: 13 },
+  idPreview: { width: "100%", height: "100%" },
   switchRow: {
     flexDirection: "row-reverse",
     alignItems: "center",

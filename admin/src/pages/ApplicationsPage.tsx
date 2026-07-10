@@ -119,6 +119,27 @@ export function ApplicationsPage() {
       <Dialog open={!!selected} onClose={() => setSelected(null)} fullWidth maxWidth="sm">
         <DialogTitle>مراجعة طلب: {selected?.agencyName}</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+          {selected?.idDocumentUrl && (
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                صورة الهوية
+              </Typography>
+              <Box
+                component="img"
+                src={selected.idDocumentUrl}
+                alt="ID document"
+                sx={{
+                  width: "100%",
+                  maxHeight: 320,
+                  objectFit: "contain",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "action.hover",
+                }}
+              />
+            </Box>
+          )}
           <TextField select label="الإجراء" value={action} onChange={(e) => setAction(e.target.value)}>
             <MenuItem value="APPROVE">قبول</MenuItem>
             <MenuItem value="REJECT">رفض</MenuItem>

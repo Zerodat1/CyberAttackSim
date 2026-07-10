@@ -23,6 +23,7 @@ export interface RechargeAgencyApplication {
   paymentMethods: string[];
   previousExperience: string | null;
   yearsOfExperience: number | null;
+  idDocumentUrl: string | null;
   status: ApplicationStatus;
   reviewNotes: string | null;
   createdAt: string;
