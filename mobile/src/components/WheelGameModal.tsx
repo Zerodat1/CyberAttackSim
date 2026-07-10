@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiClient } from "@/api/client";
 import { colors, radii, spacing } from "@/theme";
 import { BetAmountInput } from "@/components/BetAmountInput";
 import { GameModalFrame } from "@/components/GameModalFrame";
+import { GameResultBanner } from "@/components/GameResultBanner";
 import type { PlayGameResult, WheelGameSettings } from "@/api/types";
 
 interface Props {
@@ -76,27 +78,47 @@ export function WheelGameModal({ visible, roomId, onClose }: Props) {
       <BetAmountInput value={betAmount} onChange={setBetAmount} />
 
       <View style={styles.segmentsGrid}>
-        {segments.map((segment, index) => (
-          <View
-            key={index}
-            style={[styles.segment, highlightIndex === index && (spinning ? styles.segmentSpin : styles.segmentLanded)]}
-          >
-            <Text style={styles.segmentText}>{segment.label}</Text>
-          </View>
-        ))}
+        {segments.map((segment, index) => {
+          const isHighlighted = highlightIndex === index;
+          const content = (
+            <Text style={[styles.segmentText, isHighlighted && styles.segmentTextHighlighted]}>{segment.label}</Text>
+          );
+          if (isHighlighted) {
+            return (
+              <LinearGradient
+                key={index}
+                colors={spinning ? ["#f5c451", "#e08a1f"] : ["#ffe08a", "#f5c451"]}
+                style={[styles.segment, styles.segmentHighlighted]}
+              >
+                {content}
+              </LinearGradient>
+            );
+          }
+          return (
+            <View key={index} style={styles.segment}>
+              {content}
+            </View>
+          );
+        })}
       </View>
 
       {playMutation.isPending && !spinning && <ActivityIndicator color={colors.gold} style={{ marginBottom: 10 }} />}
       {error && <Text style={styles.error}>{error}</Text>}
       {spinning && <Text style={styles.spinningText}>جارِ الدوران...</Text>}
       {!spinning && lastResult && (
-        <Text style={lastResult.round.isWin ? styles.win : styles.lose}>
-          {lastResult.round.isWin
-            ? `فزت بمضاعف x${lastResult.round.multiplier} — ربحت ${lastResult.round.payout} ذهب`
-            : "لم يحالفك الحظ هذه المرة"}
-          {" — رصيدك الآن: "}
-          {lastResult.goldBalance}
-        </Text>
+        <GameResultBanner
+          isWin={lastResult.round.isWin}
+          title={
+            lastResult.round.isWin
+              ? `فزت بمضاعف x${lastResult.round.multiplier}!`
+              : "لم يحالفك الحظ هذه المرة"
+          }
+          subtitle={
+            lastResult.round.isWin
+              ? `ربحت ${lastResult.round.payout} ذهب — رصيدك الآن ${lastResult.goldBalance}`
+              : `رصيدك الآن: ${lastResult.goldBalance}`
+          }
+        />
       )}
 
       <TouchableOpacity
@@ -121,14 +143,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "transparent",
   },
-  segmentSpin: { borderColor: colors.gold, backgroundColor: "rgba(245,196,81,0.25)" },
-  segmentLanded: { borderColor: colors.gold, backgroundColor: "rgba(245,196,81,0.4)" },
+  segmentHighlighted: {
+    borderColor: "#fff",
+    shadowColor: colors.gold,
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
   segmentText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  segmentTextHighlighted: { color: "#3a2200" },
   button: { backgroundColor: colors.gold, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: "#1a1438", fontWeight: "800" },
   error: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
-  win: { color: colors.success, textAlign: "center", marginBottom: spacing.sm },
-  lose: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
   spinningText: { color: colors.gold, textAlign: "center", marginBottom: spacing.sm, fontWeight: "700" },
 });

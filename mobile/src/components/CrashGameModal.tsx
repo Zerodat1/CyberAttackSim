@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiClient } from "@/api/client";
 import { colors, radii, spacing } from "@/theme";
 import { BetAmountInput } from "@/components/BetAmountInput";
 import { GameModalFrame } from "@/components/GameModalFrame";
+import { GameResultBanner } from "@/components/GameResultBanner";
 import type { CrashGameSettings, PlayGameResult } from "@/api/types";
 
 interface Props {
@@ -102,24 +104,29 @@ export function CrashGameModal({ visible, roomId, onClose }: Props) {
         ))}
       </View>
 
-      <View style={[styles.multiplierBox, crashed && styles.multiplierBoxCrashed]}>
+      <LinearGradient
+        colors={crashed ? ["#4a1a1a", "#2a0f0f"] : ["#0d3b4f", "#0a2a2e"]}
+        style={[styles.multiplierBox, crashed && styles.multiplierBoxCrashed]}
+      >
         <Text style={[styles.multiplierText, crashed && styles.multiplierTextCrashed]}>
           x{liveMultiplier.toFixed(2)}
         </Text>
         {running && !crashed && <Text style={styles.runningHint}>جارِ الصعود...</Text>}
         {crashed && <Text style={styles.crashedHint}>انفجر الصاروخ!</Text>}
-      </View>
+      </LinearGradient>
 
       {playMutation.isPending && !running && <ActivityIndicator color={colors.diamond} style={{ marginBottom: 10 }} />}
       {error && <Text style={styles.error}>{error}</Text>}
       {!running && lastResult && (
-        <Text style={lastResult.round.isWin ? styles.win : styles.lose}>
-          {lastResult.round.isWin
-            ? `سحبت عند x${target} — ربحت ${lastResult.round.payout} ذهب`
-            : `انفجر الصاروخ قبل أن تصل — خسرت الرهان`}
-          {" — رصيدك الآن: "}
-          {lastResult.goldBalance}
-        </Text>
+        <GameResultBanner
+          isWin={lastResult.round.isWin}
+          title={lastResult.round.isWin ? `سحبت عند x${target}!` : "انفجر الصاروخ قبل أن تصل"}
+          subtitle={
+            lastResult.round.isWin
+              ? `ربحت ${lastResult.round.payout} ذهب — رصيدك الآن ${lastResult.goldBalance}`
+              : `رصيدك الآن: ${lastResult.goldBalance}`
+          }
+        />
       )}
 
       <TouchableOpacity
@@ -143,16 +150,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: "center",
   },
-  targetChipActive: { backgroundColor: colors.diamond },
+  targetChipActive: {
+    backgroundColor: colors.diamond,
+    shadowColor: colors.diamond,
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   targetChipText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   multiplierBox: {
-    backgroundColor: colors.surfaceMuted,
     borderRadius: radii.lg,
     paddingVertical: spacing.xl,
     alignItems: "center",
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
   },
-  multiplierBoxCrashed: { backgroundColor: "rgba(255,107,107,0.15)" },
+  multiplierBoxCrashed: { borderColor: "rgba(255,107,107,0.35)" },
   multiplierText: { color: colors.diamond, fontSize: 32, fontWeight: "900" },
   multiplierTextCrashed: { color: colors.danger },
   runningHint: { color: colors.textSecondary, fontSize: 12, marginTop: spacing.xs },
@@ -161,6 +176,4 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: "#0a2a2e", fontWeight: "800" },
   error: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
-  win: { color: colors.success, textAlign: "center", marginBottom: spacing.sm },
-  lose: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
 });

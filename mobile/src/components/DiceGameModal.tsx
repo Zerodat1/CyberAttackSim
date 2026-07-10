@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiClient } from "@/api/client";
 import { colors, radii, spacing } from "@/theme";
 import { BetAmountInput } from "@/components/BetAmountInput";
 import { GameModalFrame } from "@/components/GameModalFrame";
+import { GameResultBanner } from "@/components/GameResultBanner";
 import type { DiceGameSettings, PlayDiceResult } from "@/api/types";
 
 interface Props {
@@ -58,27 +60,40 @@ export function DiceGameModal({ visible, roomId, onClose }: Props) {
 
       <Text style={styles.label}>اختر رقمًا من 0 إلى 9</Text>
       <View style={styles.numbersRow}>
-        {NUMBERS.map((n) => (
-          <TouchableOpacity
-            key={n}
-            style={[styles.numberChip, choice === n && styles.numberChipActive]}
-            onPress={() => setChoice(n)}
-          >
-            <Text style={styles.numberText}>{n}</Text>
-          </TouchableOpacity>
-        ))}
+        {NUMBERS.map((n) => {
+          const active = choice === n;
+          return (
+            <TouchableOpacity key={n} activeOpacity={0.8} onPress={() => setChoice(n)}>
+              {active ? (
+                <LinearGradient colors={[colors.primary, "#8a3ffb"]} style={[styles.numberChip, styles.numberChipActive]}>
+                  <Text style={styles.numberText}>{n}</Text>
+                </LinearGradient>
+              ) : (
+                <View style={styles.numberChip}>
+                  <Text style={styles.numberText}>{n}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {playMutation.isPending && <ActivityIndicator color={colors.primary} style={{ marginBottom: 10 }} />}
       {error && <Text style={styles.error}>{error}</Text>}
       {lastResult && (
-        <Text style={lastResult.round.isWin ? styles.win : styles.lose}>
-          {lastResult.round.isWin
-            ? `فزت! الرقم كان ${lastResult.round.rolledNumber} — ربحت ${lastResult.round.payout} ذهب`
-            : `خسرت، الرقم كان ${lastResult.round.rolledNumber}`}
-          {" — رصيدك الآن: "}
-          {lastResult.goldBalance}
-        </Text>
+        <GameResultBanner
+          isWin={lastResult.round.isWin}
+          title={
+            lastResult.round.isWin
+              ? `فزت! ربحت ${lastResult.round.payout} ذهب`
+              : `خسرت — الرقم كان ${lastResult.round.rolledNumber}`
+          }
+          subtitle={
+            lastResult.round.isWin
+              ? `الرقم الصحيح كان ${lastResult.round.rolledNumber} — رصيدك الآن ${lastResult.goldBalance}`
+              : `رصيدك الآن: ${lastResult.goldBalance}`
+          }
+        />
       )}
 
       <TouchableOpacity
@@ -96,19 +111,26 @@ const styles = StyleSheet.create({
   label: { color: colors.textSecondary, textAlign: "right", marginBottom: spacing.sm },
   numbersRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
   numberChip: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
   },
-  numberChipActive: { backgroundColor: colors.primary },
+  numberChipActive: {
+    borderColor: colors.primaryLight,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   numberText: { color: "#fff", fontWeight: "700" },
   button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: "#fff", fontWeight: "700" },
   error: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
-  win: { color: colors.success, textAlign: "center", marginBottom: spacing.sm },
-  lose: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
 });

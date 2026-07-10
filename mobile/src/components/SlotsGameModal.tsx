@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiClient } from "@/api/client";
 import { colors, radii, spacing } from "@/theme";
 import { BetAmountInput } from "@/components/BetAmountInput";
 import { GameModalFrame } from "@/components/GameModalFrame";
+import { GameResultBanner } from "@/components/GameResultBanner";
 import type { PlayGameResult, SlotsGameSettings } from "@/api/types";
 
 interface Props {
@@ -89,25 +91,29 @@ export function SlotsGameModal({ visible, roomId, onClose }: Props) {
     >
       <BetAmountInput value={betAmount} onChange={setBetAmount} />
 
-      <View style={styles.reelsRow}>
-        {reels.map((symbol, index) => (
-          <View key={index} style={styles.reel}>
-            <Text style={styles.reelSymbol}>{symbol}</Text>
-          </View>
-        ))}
-      </View>
+      <LinearGradient colors={["#3a1f5c", "#241246"]} style={styles.machine}>
+        <View style={styles.reelsRow}>
+          {reels.map((symbol, index) => (
+            <View key={index} style={[styles.reel, !spinning && lastResult?.round.isWin && styles.reelWin]}>
+              <Text style={styles.reelSymbol}>{symbol}</Text>
+            </View>
+          ))}
+        </View>
+      </LinearGradient>
 
       {playMutation.isPending && !spinning && <ActivityIndicator color={colors.primary} style={{ marginBottom: 10 }} />}
       {error && <Text style={styles.error}>{error}</Text>}
       {spinning && <Text style={styles.spinningText}>جارِ التدوير...</Text>}
       {!spinning && lastResult && (
-        <Text style={lastResult.round.isWin ? styles.win : styles.lose}>
-          {lastResult.round.isWin
-            ? `فزت بمضاعف x${lastResult.round.multiplier} — ربحت ${lastResult.round.payout} ذهب`
-            : "حظ أوفر في المرة القادمة"}
-          {" — رصيدك الآن: "}
-          {lastResult.goldBalance}
-        </Text>
+        <GameResultBanner
+          isWin={lastResult.round.isWin}
+          title={lastResult.round.isWin ? `فزت بمضاعف x${lastResult.round.multiplier}!` : "حظ أوفر في المرة القادمة"}
+          subtitle={
+            lastResult.round.isWin
+              ? `ربحت ${lastResult.round.payout} ذهب — رصيدك الآن ${lastResult.goldBalance}`
+              : `رصيدك الآن: ${lastResult.goldBalance}`
+          }
+        />
       )}
 
       <TouchableOpacity
@@ -122,7 +128,14 @@ export function SlotsGameModal({ visible, roomId, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  reelsRow: { flexDirection: "row", justifyContent: "center", gap: spacing.md, marginBottom: spacing.lg },
+  machine: {
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  reelsRow: { flexDirection: "row", justifyContent: "center", gap: spacing.md },
   reel: {
     width: 72,
     height: 72,
@@ -130,13 +143,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  reelWin: {
+    borderColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
   reelSymbol: { fontSize: 32 },
   button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: "#fff", fontWeight: "700" },
   error: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
-  win: { color: colors.success, textAlign: "center", marginBottom: spacing.sm },
-  lose: { color: colors.danger, textAlign: "center", marginBottom: spacing.sm },
   spinningText: { color: colors.primaryLight, textAlign: "center", marginBottom: spacing.sm, fontWeight: "700" },
 });
