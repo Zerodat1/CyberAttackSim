@@ -120,6 +120,7 @@ export interface RoomDetail {
   name: string;
   isPasswordProtected: boolean;
   seatCount: number;
+  backgroundUrl: string | null;
   seats: RoomSeat[];
   members: RoomMember[];
 }

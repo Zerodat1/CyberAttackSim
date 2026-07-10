@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ActivityIndicator,
+  ImageBackground,
   Modal,
   ScrollView,
   StyleSheet,
@@ -33,6 +34,7 @@ import type {
 } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 import { resolveFrame, resolveVipBadge } from "@/utils/cosmetics";
+import { resolveRoomBackground } from "@/constants/roomBackgrounds";
 import { joinVoiceChannel, leaveVoiceChannel, setVoiceMuted } from "@/services/voiceService";
 
 const GAME_ICON: Record<GameType, string> = {
@@ -239,9 +241,17 @@ export function RoomScreen({ route, navigation }: Props) {
     );
   }
 
+  const roomBackground = resolveRoomBackground(room.backgroundUrl);
+
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={["#3a1f6e", "#1a1438", "#0a0a1a"]} style={StyleSheet.absoluteFill} />
+      {roomBackground.kind === "image" ? (
+        <ImageBackground source={{ uri: roomBackground.imageUrl }} style={StyleSheet.absoluteFill}>
+          <View style={styles.backgroundScrim} />
+        </ImageBackground>
+      ) : (
+        <LinearGradient colors={roomBackground.colors} style={StyleSheet.absoluteFill} />
+      )}
       <View style={[styles.glowTop, { backgroundColor: hexToRgba(accentColor, 0.28) }]} />
       <View style={styles.glowBottom} />
 
@@ -451,6 +461,7 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     backgroundColor: "rgba(245, 196, 81, 0.08)",
   },
+  backgroundScrim: { flex: 1, backgroundColor: "rgba(10, 10, 20, 0.55)" },
   topBar: {
     flexDirection: "row-reverse",
     alignItems: "center",

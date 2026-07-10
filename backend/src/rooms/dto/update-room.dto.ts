@@ -26,4 +26,9 @@ export class UpdateRoomDto {
   @IsOptional()
   @IsIn(ALLOWED_SEAT_COUNTS)
   seatCount?: number;
+
+  @ApiPropertyOptional({ description: "Background image URL for the room, or null to reset to the default" })
+  @IsOptional()
+  @IsString()
+  backgroundUrl?: string | null;
 }

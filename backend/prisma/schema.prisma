@@ -485,6 +485,7 @@ model Room {
   isPasswordProtected Boolean  @default(false)
   passwordHash        String?
   seatCount           Int      @default(8)
+  backgroundUrl       String?
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

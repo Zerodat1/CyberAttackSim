@@ -141,7 +141,13 @@ export class RoomsService {
       throw new ForbiddenException("Only the room owner can change the number of mic seats");
     }
 
-    const data: { name?: string; isPasswordProtected?: boolean; passwordHash?: string | null; seatCount?: number } = {};
+    const data: {
+      name?: string;
+      isPasswordProtected?: boolean;
+      passwordHash?: string | null;
+      seatCount?: number;
+      backgroundUrl?: string | null;
+    } = {};
     if (dto.name) data.name = dto.name;
     if (dto.isPasswordProtected !== undefined) {
       data.isPasswordProtected = dto.isPasswordProtected;
@@ -151,6 +157,10 @@ export class RoomsService {
     if (dto.seatCount !== undefined) {
       await this.resizeSeats(roomId, dto.seatCount);
       data.seatCount = dto.seatCount;
+    }
+
+    if (dto.backgroundUrl !== undefined) {
+      data.backgroundUrl = dto.backgroundUrl;
     }
 
     const room = await this.prisma.room.update({ where: { id: roomId }, data });

@@ -7,6 +7,7 @@ import { colors, radii, spacing } from "@/theme";
 import type { RoomDetail } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 import { SeatCountModal } from "@/components/SeatCountModal";
+import { RoomBackgroundModal } from "@/components/RoomBackgroundModal";
 
 interface Props {
   visible: boolean;
@@ -25,6 +26,7 @@ export function RoomSettingsModal({ visible, room, isOwner, onClose, navigation 
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [seatCountModalVisible, setSeatCountModalVisible] = useState(false);
+  const [backgroundModalVisible, setBackgroundModalVisible] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -111,6 +113,13 @@ export function RoomSettingsModal({ visible, room, isOwner, onClose, navigation 
             </TouchableOpacity>
           )}
 
+          {isOwner && (
+            <TouchableOpacity style={styles.seatButton} onPress={() => setBackgroundModalVisible(true)}>
+              <Text style={styles.seatButtonText}>خلفية الغرفة</Text>
+              <Text style={styles.seatButtonValue}>تغيير ‹</Text>
+            </TouchableOpacity>
+          )}
+
           {error && <Text style={styles.error}>{error}</Text>}
           {success && <Text style={styles.success}>{success}</Text>}
 
@@ -127,6 +136,13 @@ export function RoomSettingsModal({ visible, room, isOwner, onClose, navigation 
             roomId={room.id}
             currentSeatCount={room.seatCount}
             onClose={() => setSeatCountModalVisible(false)}
+          />
+
+          <RoomBackgroundModal
+            visible={backgroundModalVisible}
+            roomId={room.id}
+            currentBackgroundUrl={room.backgroundUrl}
+            onClose={() => setBackgroundModalVisible(false)}
           />
 
           {isOwner && (
