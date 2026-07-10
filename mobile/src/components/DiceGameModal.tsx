@@ -19,7 +19,7 @@ const NUMBERS = Array.from({ length: 10 }, (_, i) => i);
 
 export function DiceGameModal({ visible, roomId, onClose }: Props) {
   const queryClient = useQueryClient();
-  const [betAmount, setBetAmount] = useState("50");
+  const [betAmount, setBetAmount] = useState("1000");
   const [choice, setChoice] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<PlayDiceResult | null>(null);
   const [error, setError] = useState<string | null>(null);

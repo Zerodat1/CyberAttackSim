@@ -19,7 +19,7 @@ const TARGET_PRESETS = [1.5, 2, 3, 5, 10];
 
 export function CrashGameModal({ visible, roomId, onClose }: Props) {
   const queryClient = useQueryClient();
-  const [betAmount, setBetAmount] = useState("50");
+  const [betAmount, setBetAmount] = useState("1000");
   const [target, setTarget] = useState(2);
   const [liveMultiplier, setLiveMultiplier] = useState(1);
   const [running, setRunning] = useState(false);

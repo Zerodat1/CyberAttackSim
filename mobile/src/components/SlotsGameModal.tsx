@@ -19,7 +19,7 @@ const FALLBACK_SYMBOLS = ["🍒", "🍋", "🍇", "⭐", "7️⃣"];
 
 export function SlotsGameModal({ visible, roomId, onClose }: Props) {
   const queryClient = useQueryClient();
-  const [betAmount, setBetAmount] = useState("50");
+  const [betAmount, setBetAmount] = useState("1000");
   const [reels, setReels] = useState<string[]>(["🍒", "🍋", "🍇"]);
   const [spinning, setSpinning] = useState(false);
   const [lastResult, setLastResult] = useState<PlayGameResult | null>(null);

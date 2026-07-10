@@ -17,7 +17,7 @@ interface Props {
 
 export function WheelGameModal({ visible, roomId, onClose }: Props) {
   const queryClient = useQueryClient();
-  const [betAmount, setBetAmount] = useState("50");
+  const [betAmount, setBetAmount] = useState("1000");
   const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [lastResult, setLastResult] = useState<PlayGameResult | null>(null);
