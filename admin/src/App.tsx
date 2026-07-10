@@ -13,6 +13,7 @@ import { StorePage } from "@/pages/StorePage";
 import { VipPage } from "@/pages/VipPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminInvitesPage } from "@/pages/AdminInvitesPage";
+import { UsersPage } from "@/pages/UsersPage";
 import { AdminRegisterPage } from "@/pages/AdminRegisterPage";
 import { GlobalRole } from "@/api/types";
 
@@ -67,6 +68,14 @@ export function App() {
         element={
           <ProtectedLayout allow={["OWNER"]}>
             <AdminInvitesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <UsersPage />
           </ProtectedLayout>
         }
       />

@@ -9,6 +9,35 @@ export interface AuthUser {
   globalRole: GlobalRole;
 }
 
+export interface AdminUser {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+  globalRole: GlobalRole;
+  isActive: boolean;
+  bannedAt: string | null;
+  bannedReason: string | null;
+  createdAt: string;
+}
+
+export interface AdminUserList {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface BannedIp {
+  id: string;
+  ipAddress: string;
+  reason: string | null;
+  createdAt: string;
+  bannedBy: { id: string; username: string } | null;
+}
+
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED" | "SUSPENDED";
 
 export interface RechargeAgencyApplication {

@@ -147,6 +147,8 @@ model User {
   gender              Gender?
   globalRole          GlobalRole @default(USER)
   isActive            Boolean    @default(true)
+  bannedAt            DateTime?
+  bannedReason        String?
   failedLoginAttempts Int        @default(0)
   lockedUntil         DateTime?
 
@@ -208,7 +210,20 @@ model User {
   createdAdminInvites AdminInvite[] @relation("AdminInviteCreatedBy")
   usedAdminInvite     AdminInvite?  @relation("AdminInviteUsedBy")
 
+  bannedIps BannedIp[] @relation("IpBannedBy")
+
   @@index([globalRole])
+}
+
+model BannedIp {
+  id           String   @id @default(uuid())
+  ipAddress    String   @unique
+  reason       String?
+  bannedById   String?
+  bannedBy     User?    @relation("IpBannedBy", fields: [bannedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([ipAddress])
 }
 
 model AdminInvite {

@@ -20,8 +20,14 @@ export function LoginScreen({ navigation }: Props) {
     setError(null);
     try {
       await login(identifier, password);
-    } catch {
-      setError("بيانات الدخول غير صحيحة");
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 403 && typeof message === "string") {
+        setError(message);
+      } else {
+        setError("بيانات الدخول غير صحيحة");
+      }
     } finally {
       setSubmitting(false);
     }

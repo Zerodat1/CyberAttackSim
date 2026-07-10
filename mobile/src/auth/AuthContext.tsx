@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { secureStorage } from "@/api/storage";
-import { apiClient, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/api/client";
+import { apiClient, onSessionExpired, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/api/client";
 import { AuthUser } from "@/api/types";
 
 interface AuthContextValue {
@@ -45,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshUser().finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => onSessionExpired(() => setUser(null)), []);
 
   async function login(identifier: string, password: string) {
     const { data } = await apiClient.post("/auth/login", { identifier, password });

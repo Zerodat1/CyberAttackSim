@@ -18,6 +18,16 @@ apiClient.interceptors.request.use(async (config) => {
 
 let refreshing: Promise<string | null> | null = null;
 
+const sessionExpiredListeners: (() => void)[] = [];
+
+export function onSessionExpired(listener: () => void) {
+  sessionExpiredListeners.push(listener);
+  return () => {
+    const index = sessionExpiredListeners.indexOf(listener);
+    if (index !== -1) sessionExpiredListeners.splice(index, 1);
+  };
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await secureStorage.getItemAsync(REFRESH_TOKEN_KEY);
   if (!refreshToken) return null;
@@ -47,6 +57,7 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(original);
       }
+      sessionExpiredListeners.forEach((listener) => listener());
     }
     return Promise.reject(error);
   },

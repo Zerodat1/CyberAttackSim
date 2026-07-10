@@ -24,6 +24,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
+import GppBadIcon from "@mui/icons-material/GppBad";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/auth/AuthContext";
 import { GlobalRole } from "@/api/types";
@@ -52,6 +53,7 @@ const NAV_ITEMS: { to: string; label: string; icon: JSX.Element; roles: GlobalRo
   { to: "/store", label: "متجر المظاهر", icon: <StorefrontIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/vip", label: "مستويات VIP", icon: <WorkspacePremiumIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/admin-invites", label: "دعوات الأدمن", icon: <PersonAddAlt1Icon />, roles: ["OWNER"] },
+  { to: "/users", label: "إدارة المستخدمين", icon: <GppBadIcon />, roles: ["OWNER"] },
   { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
 ];
 

@@ -20,6 +20,8 @@ import { AdminInvitesModule } from "./admin-invites/admin-invites.module";
 import { AdminStatsModule } from "./admin-stats/admin-stats.module";
 import { StoreModule } from "./store/store.module";
 import { VipModule } from "./vip/vip.module";
+import { AdminUsersModule } from "./admin-users/admin-users.module";
+import { IpBanGuard } from "./common/guards/ip-ban.guard";
 
 @Module({
   imports: [
@@ -52,7 +54,11 @@ import { VipModule } from "./vip/vip.module";
     AdminStatsModule,
     StoreModule,
     VipModule,
+    AdminUsersModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: IpBanGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

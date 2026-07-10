@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -75,6 +76,12 @@ export class AuthService {
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       throw new UnauthorizedException("Account temporarily locked, try again later");
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        user.bannedReason ? `تم حظر هذا الحساب: ${user.bannedReason}` : "تم حظر هذا الحساب",
+      );
     }
 
     const passwordValid = await argon2.verify(user.passwordHash, dto.password);
