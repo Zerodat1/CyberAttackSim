@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import * as argon2 from "argon2";
 import { GlobalRole, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CacheService } from "../redis/cache.service";
 import { sessionCacheKey } from "../auth/strategies/jwt.strategy";
 import { BanIpDto } from "./dto/ban-ip.dto";
+import { CreateAdminDto } from "./dto/create-admin.dto";
 
 const ADMIN_USER_SELECT = {
   id: true,
@@ -65,23 +67,11 @@ export class AdminUsersService {
       throw new BadRequestException("Cannot ban another owner account");
     }
 
-    const sessions = await this.prisma.session.findMany({
-      where: { userId: targetUserId, revokedAt: null },
-      select: { id: true },
+    await this.prisma.user.update({
+      where: { id: targetUserId },
+      data: { isActive: false, bannedAt: new Date(), bannedReason: reason ?? null },
     });
-
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: targetUserId },
-        data: { isActive: false, bannedAt: new Date(), bannedReason: reason ?? null },
-      }),
-      this.prisma.session.updateMany({
-        where: { userId: targetUserId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      }),
-    ]);
-
-    await Promise.all(sessions.map((session) => this.cache.del(sessionCacheKey(session.id))));
+    await this.revokeSessions(targetUserId);
 
     return this.prisma.user.findUnique({ where: { id: targetUserId }, select: ADMIN_USER_SELECT });
   }
@@ -127,5 +117,94 @@ export class AdminUsersService {
       throw new NotFoundException("Banned IP entry not found");
     }
     await this.prisma.bannedIp.delete({ where: { id } });
+  }
+
+  listAdmins() {
+    return this.prisma.user.findMany({
+      where: { globalRole: GlobalRole.ADMIN },
+      select: ADMIN_USER_SELECT,
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async createAdmin(dto: CreateAdminDto) {
+    const existing = await this.prisma.user.findFirst({
+      where: { OR: [{ email: dto.email }, { username: dto.username }] },
+    });
+    if (existing) {
+      throw new ConflictException("Email or username already in use");
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+
+    return this.prisma.user.create({
+      data: {
+        email: dto.email,
+        passwordHash,
+        fullName: dto.fullName,
+        username: dto.username,
+        globalRole: GlobalRole.ADMIN,
+      },
+      select: ADMIN_USER_SELECT,
+    });
+  }
+
+  async updateAdminEmail(targetUserId: string, email: string) {
+    const target = await this.findAdmin(targetUserId);
+
+    const existing = await this.prisma.user.findFirst({ where: { email, id: { not: target.id } } });
+    if (existing) {
+      throw new ConflictException("Email already in use");
+    }
+
+    return this.prisma.user.update({
+      where: { id: target.id },
+      data: { email },
+      select: ADMIN_USER_SELECT,
+    });
+  }
+
+  async updateAdminPassword(targetUserId: string, password: string) {
+    const target = await this.findAdmin(targetUserId);
+    const passwordHash = await argon2.hash(password);
+
+    await this.prisma.user.update({ where: { id: target.id }, data: { passwordHash } });
+    await this.revokeSessions(target.id);
+
+    return this.prisma.user.findUnique({ where: { id: target.id }, select: ADMIN_USER_SELECT });
+  }
+
+  async revokeAdmin(targetUserId: string) {
+    const target = await this.findAdmin(targetUserId);
+
+    const updated = await this.prisma.user.update({
+      where: { id: target.id },
+      data: { globalRole: GlobalRole.USER },
+      select: ADMIN_USER_SELECT,
+    });
+    await this.revokeSessions(target.id);
+
+    return updated;
+  }
+
+  private async findAdmin(targetUserId: string) {
+    const target = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!target) {
+      throw new NotFoundException("User not found");
+    }
+    if (target.globalRole !== GlobalRole.ADMIN) {
+      throw new BadRequestException("Target user is not an admin");
+    }
+    return target;
+  }
+
+  private async revokeSessions(userId: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null },
+      select: { id: true },
+    });
+
+    await this.prisma.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await Promise.all(sessions.map((session) => this.cache.del(sessionCacheKey(session.id))));
   }
 }

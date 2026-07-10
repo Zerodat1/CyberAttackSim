@@ -52,7 +52,7 @@ const NAV_ITEMS: { to: string; label: string; icon: JSX.Element; roles: GlobalRo
   { to: "/games", label: "ألعاب الرهان", icon: <CasinoIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/store", label: "متجر المظاهر", icon: <StorefrontIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/vip", label: "مستويات VIP", icon: <WorkspacePremiumIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
-  { to: "/admin-invites", label: "دعوات الأدمن", icon: <PersonAddAlt1Icon />, roles: ["OWNER"] },
+  { to: "/admins", label: "إدارة الأدمن", icon: <PersonAddAlt1Icon />, roles: ["OWNER"] },
   { to: "/users", label: "إدارة المستخدمين", icon: <GppBadIcon />, roles: ["OWNER"] },
   { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
 ];

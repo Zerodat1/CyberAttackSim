@@ -12,9 +12,8 @@ import { GamesPage } from "@/pages/GamesPage";
 import { StorePage } from "@/pages/StorePage";
 import { VipPage } from "@/pages/VipPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
-import { AdminInvitesPage } from "@/pages/AdminInvitesPage";
+import { AdminsPage } from "@/pages/AdminsPage";
 import { UsersPage } from "@/pages/UsersPage";
-import { AdminRegisterPage } from "@/pages/AdminRegisterPage";
 import { GlobalRole } from "@/api/types";
 
 const MANAGEMENT_ROLES: GlobalRole[] = ["OWNER", "RECHARGE_MANAGER"];
@@ -54,7 +53,6 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/admin-register/:token" element={<AdminRegisterPage />} />
       <Route
         path="/admin-dashboard"
         element={
@@ -64,10 +62,10 @@ export function App() {
         }
       />
       <Route
-        path="/admin-invites"
+        path="/admins"
         element={
           <ProtectedLayout allow={["OWNER"]}>
-            <AdminInvitesPage />
+            <AdminsPage />
           </ProtectedLayout>
         }
       />

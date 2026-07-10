@@ -17,7 +17,6 @@ import { WalletModule } from "./wallet/wallet.module";
 import { GiftsModule } from "./gifts/gifts.module";
 import { GamesModule } from "./games/games.module";
 import { HostAgenciesModule } from "./host-agencies/host-agencies.module";
-import { AdminInvitesModule } from "./admin-invites/admin-invites.module";
 import { AdminStatsModule } from "./admin-stats/admin-stats.module";
 import { StoreModule } from "./store/store.module";
 import { VipModule } from "./vip/vip.module";
@@ -64,7 +63,6 @@ import { HealthModule } from "./health/health.module";
     GiftsModule,
     GamesModule,
     HostAgenciesModule,
-    AdminInvitesModule,
     AdminStatsModule,
     StoreModule,
     VipModule,

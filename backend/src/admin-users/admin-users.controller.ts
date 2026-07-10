@@ -11,6 +11,9 @@ import { AuthenticatedUser } from "../common/types/authenticated-user";
 import { AdminUsersService } from "./admin-users.service";
 import { BanUserDto } from "./dto/ban-user.dto";
 import { BanIpDto } from "./dto/ban-ip.dto";
+import { CreateAdminDto } from "./dto/create-admin.dto";
+import { UpdateEmailDto } from "./dto/update-email.dto";
+import { UpdatePasswordDto } from "./dto/update-password.dto";
 
 @ApiTags("admin-users")
 @ApiBearerAuth()
@@ -49,5 +52,30 @@ export class AdminUsersController {
   @Delete("banned-ips/:id")
   unbanIp(@Param("id") id: string) {
     return this.adminUsersService.unbanIp(id);
+  }
+
+  @Get("admins")
+  listAdmins() {
+    return this.adminUsersService.listAdmins();
+  }
+
+  @Post("admins")
+  createAdmin(@Body() dto: CreateAdminDto) {
+    return this.adminUsersService.createAdmin(dto);
+  }
+
+  @Patch(":id/email")
+  updateAdminEmail(@Param("id") id: string, @Body() dto: UpdateEmailDto) {
+    return this.adminUsersService.updateAdminEmail(id, dto.email);
+  }
+
+  @Patch(":id/password")
+  updateAdminPassword(@Param("id") id: string, @Body() dto: UpdatePasswordDto) {
+    return this.adminUsersService.updateAdminPassword(id, dto.password);
+  }
+
+  @Patch(":id/revoke-admin")
+  revokeAdmin(@Param("id") id: string) {
+    return this.adminUsersService.revokeAdmin(id);
   }
 }

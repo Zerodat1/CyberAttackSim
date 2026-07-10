@@ -207,9 +207,6 @@ model User {
   vipLevel     Int?
   vipExpiresAt DateTime?
 
-  createdAdminInvites AdminInvite[] @relation("AdminInviteCreatedBy")
-  usedAdminInvite     AdminInvite?  @relation("AdminInviteUsedBy")
-
   bannedIps BannedIp[] @relation("IpBannedBy")
 
   deviceTokens DeviceToken[]
@@ -226,21 +223,6 @@ model BannedIp {
   createdAt    DateTime @default(now())
 
   @@index([ipAddress])
-}
-
-model AdminInvite {
-  id          String    @id @default(uuid())
-  token       String    @unique
-  createdById String
-  createdBy   User      @relation("AdminInviteCreatedBy", fields: [createdById], references: [id])
-  usedById    String?   @unique
-  usedBy      User?     @relation("AdminInviteUsedBy", fields: [usedById], references: [id])
-  usedAt      DateTime?
-  expiresAt   DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime  @default(now())
-
-  @@index([createdById])
 }
 
 model Session {

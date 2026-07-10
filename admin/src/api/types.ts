@@ -124,18 +124,6 @@ export interface GameSettings {
   config: Record<string, unknown> | null;
 }
 
-export interface AdminInvite {
-  id: string;
-  token: string;
-  createdById: string;
-  usedById: string | null;
-  usedBy?: { id: string; username: string; fullName: string } | null;
-  usedAt: string | null;
-  expiresAt: string | null;
-  revokedAt: string | null;
-  createdAt: string;
-}
-
 export interface AdminStatsOverview {
   users: {
     total: number;
