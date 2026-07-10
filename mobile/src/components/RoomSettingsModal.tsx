@@ -6,6 +6,7 @@ import { apiClient } from "@/api/client";
 import { colors, radii, spacing } from "@/theme";
 import type { RoomDetail } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
+import { SeatCountModal } from "@/components/SeatCountModal";
 
 interface Props {
   visible: boolean;
@@ -23,6 +24,7 @@ export function RoomSettingsModal({ visible, room, isOwner, onClose, navigation 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [seatCountModalVisible, setSeatCountModalVisible] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -102,6 +104,13 @@ export function RoomSettingsModal({ visible, room, isOwner, onClose, navigation 
             </>
           )}
 
+          {isOwner && (
+            <TouchableOpacity style={styles.seatButton} onPress={() => setSeatCountModalVisible(true)}>
+              <Text style={styles.seatButtonText}>مقعد المايك</Text>
+              <Text style={styles.seatButtonValue}>{room.seatCount} مقعد ‹</Text>
+            </TouchableOpacity>
+          )}
+
           {error && <Text style={styles.error}>{error}</Text>}
           {success && <Text style={styles.success}>{success}</Text>}
 
@@ -112,6 +121,13 @@ export function RoomSettingsModal({ visible, room, isOwner, onClose, navigation 
           >
             {saveMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>حفظ التغييرات</Text>}
           </TouchableOpacity>
+
+          <SeatCountModal
+            visible={seatCountModalVisible}
+            roomId={room.id}
+            currentSeatCount={room.seatCount}
+            onClose={() => setSeatCountModalVisible(false)}
+          />
 
           {isOwner && (
             <>
@@ -181,6 +197,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  seatButton: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  seatButtonText: { color: colors.textPrimary, fontWeight: "600" },
+  seatButtonValue: { color: colors.textSecondary, fontSize: 12 },
   saveButton: {
     backgroundColor: colors.primary,
     borderRadius: radii.md,

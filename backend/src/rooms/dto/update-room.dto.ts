@@ -1,5 +1,7 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from "class-validator";
+
+export const ALLOWED_SEAT_COUNTS = [4, 8, 10, 15, 20] as const;
 
 export class UpdateRoomDto {
   @ApiPropertyOptional()
@@ -19,4 +21,9 @@ export class UpdateRoomDto {
   @IsString()
   @MinLength(4)
   password?: string;
+
+  @ApiPropertyOptional({ enum: ALLOWED_SEAT_COUNTS, description: "Number of mic seats in the room" })
+  @IsOptional()
+  @IsIn(ALLOWED_SEAT_COUNTS)
+  seatCount?: number;
 }

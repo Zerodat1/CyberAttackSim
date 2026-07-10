@@ -137,16 +137,50 @@ export class RoomsService {
       throw new ForbiddenException("Insufficient permissions to update this room");
     }
 
-    const data: { name?: string; isPasswordProtected?: boolean; passwordHash?: string | null } = {};
+    if (dto.seatCount !== undefined && !roleAtLeast(actorRole, "OWNER")) {
+      throw new ForbiddenException("Only the room owner can change the number of mic seats");
+    }
+
+    const data: { name?: string; isPasswordProtected?: boolean; passwordHash?: string | null; seatCount?: number } = {};
     if (dto.name) data.name = dto.name;
     if (dto.isPasswordProtected !== undefined) {
       data.isPasswordProtected = dto.isPasswordProtected;
       data.passwordHash = dto.isPasswordProtected && dto.password ? await argon2.hash(dto.password) : null;
     }
 
+    if (dto.seatCount !== undefined) {
+      await this.resizeSeats(roomId, dto.seatCount);
+      data.seatCount = dto.seatCount;
+    }
+
     const room = await this.prisma.room.update({ where: { id: roomId }, data });
     await this.emitEvent({ roomId, type: "ROOM_UPDATED" });
     return room;
+  }
+
+  private async resizeSeats(roomId: string, newSeatCount: number) {
+    const currentSeats = await this.prisma.roomSeat.findMany({ where: { roomId } });
+    const currentCount = currentSeats.length;
+
+    if (newSeatCount > currentCount) {
+      await this.prisma.roomSeat.createMany({
+        data: Array.from({ length: newSeatCount - currentCount }, (_, index) => ({
+          roomId,
+          seatNumber: currentCount + index + 1,
+        })),
+      });
+      return;
+    }
+
+    if (newSeatCount < currentCount) {
+      const removedSeats = currentSeats.filter((seat) => seat.seatNumber > newSeatCount);
+      for (const seat of removedSeats) {
+        if (seat.occupantId) {
+          await this.emitEvent({ roomId, type: "SEAT_LEFT", actorId: seat.occupantId, metadata: { seatNumber: seat.seatNumber } });
+        }
+      }
+      await this.prisma.roomSeat.deleteMany({ where: { roomId, seatNumber: { gt: newSeatCount } } });
+    }
   }
 
   async deleteRoom(roomId: string, actorRole: RoomMemberRole) {
