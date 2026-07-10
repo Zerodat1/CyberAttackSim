@@ -12,12 +12,51 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
-import { Avatar } from "@/components/Avatar";
-import { colors, radii, spacing } from "@/theme";
+import { colorForName, colors, hexToRgba, radii, spacing, typography } from "@/theme";
 import type { RoomSummary } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AppStackParamList, "RoomsList">;
+
+function RoomCard({ room, onPress }: { room: RoomSummary; onPress: () => void }) {
+  const accent = colorForName(room.name);
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={[styles.thumb, { backgroundColor: hexToRgba(accent, 0.22) }]}>
+        <View style={styles.liveRibbon}>
+          <Text style={styles.liveRibbonText}>مباشر</Text>
+        </View>
+        <Text style={styles.thumbIcon}>🎙️</Text>
+        <View style={styles.membersOverlay}>
+          <Text style={styles.membersOverlayText}>👥 {room._count.members}</Text>
+        </View>
+        {room.isPasswordProtected && (
+          <View style={styles.lockBadge}>
+            <Text style={styles.lockBadgeText}>🔒</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.cardBody}>
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {room.name}
+        </Text>
+        <Text style={styles.cardSubtitle} numberOfLines={1}>
+          👑 {room.owner.fullName}
+        </Text>
+        <View style={styles.tagsRow}>
+          <View style={[styles.tag, { backgroundColor: hexToRgba(accent, 0.18) }]}>
+            <Text style={[styles.tagText, { color: accent }]}>🎧 {room.seatCount} مقعد</Text>
+          </View>
+          <View style={styles.tag}>
+            <Text style={styles.tagTextMuted}>{room.isPasswordProtected ? "خاصة" : "عامة"}</Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export function RoomsListScreen({ navigation }: Props) {
   const queryClient = useQueryClient();
@@ -51,25 +90,9 @@ export function RoomsListScreen({ navigation }: Props) {
       <FlatList
         data={rooms}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: spacing.lg }}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Room", { roomId: item.id })}>
-            <View style={styles.avatarWrap}>
-              <Avatar name={item.owner.fullName} size={44} />
-              {item.isPasswordProtected && (
-                <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>🔒</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.cardSubtitle}>{item.owner.fullName}</Text>
-            </View>
-            <View style={styles.memberPill}>
-              <Text style={styles.memberPillText}>👥 {item._count.members}</Text>
-            </View>
-          </TouchableOpacity>
+          <RoomCard room={item} onPress={() => navigation.navigate("Room", { roomId: item.id })} />
         )}
       />
       <TouchableOpacity style={styles.fab} onPress={() => setCreating(true)}>
@@ -113,37 +136,67 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.textSecondary, textAlign: "center" },
   card: {
     flexDirection: "row-reverse",
-    alignItems: "center",
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
+    borderRadius: radii.xl,
+    padding: spacing.md,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
   },
-  cardBody: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
-  cardTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "right" },
-  cardSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 4, textAlign: "right" },
-  avatarWrap: { position: "relative" },
+  thumb: {
+    width: 78,
+    height: 78,
+    borderRadius: radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbIcon: { fontSize: 30 },
+  liveRibbon: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: colors.giftPink,
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  liveRibbonText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  membersOverlay: {
+    position: "absolute",
+    bottom: 5,
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  membersOverlayText: { color: "#fff", fontSize: 10, fontWeight: "700" },
   lockBadge: {
     position: "absolute",
-    bottom: -2,
-    left: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -4,
+    left: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: colors.surface,
   },
-  lockBadgeText: { fontSize: 9 },
-  memberPill: {
+  lockBadgeText: { fontSize: 10 },
+  cardBody: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end", justifyContent: "center" },
+  cardTitle: { ...typography.heading, color: colors.textPrimary, textAlign: "right" },
+  cardSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 3, textAlign: "right" },
+  tagsRow: { flexDirection: "row-reverse", gap: spacing.xs, marginTop: spacing.sm },
+  tag: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
-  memberPillText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700" },
+  tagText: { fontSize: 11, fontWeight: "700" },
+  tagTextMuted: { color: colors.textSecondary, fontSize: 11, fontWeight: "600" },
   fab: {
     position: "absolute",
     bottom: spacing.xl,

@@ -20,7 +20,7 @@ import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
 import { GamesHubModal } from "@/components/GamesHubModal";
 import { RoomSettingsModal } from "@/components/RoomSettingsModal";
-import { colorForName, colors, radii, spacing } from "@/theme";
+import { colorForName, colors, hexToRgba, radii, spacing } from "@/theme";
 import type { GameRound, GameType, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
@@ -54,14 +54,6 @@ const ROLE_LABEL: Record<RoomMemberRole, string> = {
   MODERATOR: "منسّق",
   MEMBER: "عضو",
 };
-
-function hexToRgba(hex: string, alpha: number): string {
-  const value = hex.replace("#", "");
-  const r = parseInt(value.substring(0, 2), 16);
-  const g = parseInt(value.substring(2, 4), 16);
-  const b = parseInt(value.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 export function RoomScreen({ route, navigation }: Props) {
   const { roomId } = route.params;
