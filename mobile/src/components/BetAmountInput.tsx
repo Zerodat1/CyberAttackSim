@@ -7,7 +7,13 @@ interface Props {
   quickAmounts?: number[];
 }
 
-const DEFAULT_QUICK_AMOUNTS = [50, 100, 500, 1000];
+const DEFAULT_QUICK_AMOUNTS = [1000, 10000, 100000, 1000000];
+
+function formatAmount(amount: number): string {
+  if (amount >= 1_000_000) return `${amount / 1_000_000}M`;
+  if (amount >= 1_000) return `${amount / 1_000}K`;
+  return String(amount);
+}
 
 export function BetAmountInput({ value, onChange, quickAmounts = DEFAULT_QUICK_AMOUNTS }: Props) {
   return (
@@ -17,7 +23,7 @@ export function BetAmountInput({ value, onChange, quickAmounts = DEFAULT_QUICK_A
       <View style={styles.quickRow}>
         {quickAmounts.map((amount) => (
           <TouchableOpacity key={amount} style={styles.quickChip} onPress={() => onChange(String(amount))}>
-            <Text style={styles.quickChipText}>{amount}</Text>
+            <Text style={styles.quickChipText}>{formatAmount(amount)}</Text>
           </TouchableOpacity>
         ))}
       </View>
