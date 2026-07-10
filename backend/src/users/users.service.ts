@@ -14,6 +14,12 @@ const PUBLIC_SELECT = {
   globalRole: true,
   twoFactorEnabled: true,
   createdAt: true,
+  vipLevel: true,
+  vipExpiresAt: true,
+  activeFrame: { select: { emoji: true, colorHex: true } },
+  activeEntrance: { select: { emoji: true, colorHex: true } },
+  activeBubble: { select: { emoji: true, colorHex: true } },
+  activeMicEffect: { select: { emoji: true, colorHex: true } },
 } as const;
 
 @Injectable()

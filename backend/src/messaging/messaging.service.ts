@@ -74,7 +74,7 @@ export class MessagingService {
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {
-        sender: { select: { id: true, username: true, avatarUrl: true } },
+        sender: { select: { id: true, username: true, avatarUrl: true, activeBubble: { select: { emoji: true, colorHex: true } } } },
         replyTo: { select: { id: true, body: true, senderId: true } },
       },
     });
@@ -102,7 +102,7 @@ export class MessagingService {
           replyToId: dto.replyToId,
         },
         include: {
-          sender: { select: { id: true, username: true, avatarUrl: true } },
+          sender: { select: { id: true, username: true, avatarUrl: true, activeBubble: { select: { emoji: true, colorHex: true } } } },
           replyTo: { select: { id: true, body: true, senderId: true } },
         },
       });
@@ -188,7 +188,7 @@ export class MessagingService {
 
     const message = await this.prisma.message.create({
       data: { conversationId, senderId: userId, body, forwardedFromId },
-      include: { sender: { select: { id: true, username: true, avatarUrl: true } } },
+      include: { sender: { select: { id: true, username: true, avatarUrl: true, activeBubble: { select: { emoji: true, colorHex: true } } } } },
     });
 
     this.events.emit(MESSAGE_CREATED_EVENT, { conversationId, recipientId, senderId: userId, message });

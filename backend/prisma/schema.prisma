@@ -18,6 +18,13 @@ enum GlobalRole {
   ADMIN
 }
 
+enum StoreItemCategory {
+  FRAME
+  ENTRANCE
+  BUBBLE
+  MIC_EFFECT
+}
+
 enum RechargeAgentRole {
   MASTER
   SUB_AGENT
@@ -174,6 +181,23 @@ model User {
 
   ownedHostAgencies    HostAgency[]       @relation("HostAgencyOwner")
   hostAgencyMembership HostAgencyMember?
+
+  purchasedStoreItems UserStoreItem[]
+
+  activeFrameId String?
+  activeFrame   StoreItem? @relation("ActiveFrame", fields: [activeFrameId], references: [id], onDelete: SetNull)
+
+  activeEntranceId String?
+  activeEntrance   StoreItem? @relation("ActiveEntrance", fields: [activeEntranceId], references: [id], onDelete: SetNull)
+
+  activeBubbleId String?
+  activeBubble   StoreItem? @relation("ActiveBubble", fields: [activeBubbleId], references: [id], onDelete: SetNull)
+
+  activeMicEffectId String?
+  activeMicEffect   StoreItem? @relation("ActiveMicEffect", fields: [activeMicEffectId], references: [id], onDelete: SetNull)
+
+  vipLevel     Int?
+  vipExpiresAt DateTime?
 
   createdAdminInvites AdminInvite[] @relation("AdminInviteCreatedBy")
   usedAdminInvite     AdminInvite?  @relation("AdminInviteUsedBy")
@@ -680,4 +704,57 @@ model HostAgencyMember {
   joinedAt DateTime       @default(now())
 
   @@index([agencyId])
+}
+
+// ---------------------------------------------------------------------------
+// Store (المتجر) & VIP
+// ---------------------------------------------------------------------------
+
+model StoreItem {
+  id           String            @id @default(uuid())
+  category     StoreItemCategory
+  name         String
+  emoji        String
+  colorHex     String
+  priceGold    Decimal           @db.Decimal(14, 2)
+  durationDays Int?
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  purchases UserStoreItem[]
+
+  activeForFrame     User[] @relation("ActiveFrame")
+  activeForEntrance  User[] @relation("ActiveEntrance")
+  activeForBubble    User[] @relation("ActiveBubble")
+  activeForMicEffect User[] @relation("ActiveMicEffect")
+
+  @@index([category, isActive])
+}
+
+model UserStoreItem {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeItemId String
+  storeItem   StoreItem @relation(fields: [storeItemId], references: [id], onDelete: Cascade)
+  purchasedAt DateTime  @default(now())
+  expiresAt   DateTime?
+
+  @@unique([userId, storeItemId])
+  @@index([userId])
+}
+
+model VipLevel {
+  level            Int      @id
+  name             String
+  priceGold        Decimal  @db.Decimal(14, 2)
+  durationDays     Int
+  badgeColor       String
+  frameColorHex    String
+  frameEmoji       String
+  entranceText     String
+  entranceColorHex String
+  isActive         Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
 }

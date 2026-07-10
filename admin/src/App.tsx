@@ -9,6 +9,8 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { RoomsPage } from "@/pages/RoomsPage";
 import { GiftsPage } from "@/pages/GiftsPage";
 import { GamesPage } from "@/pages/GamesPage";
+import { StorePage } from "@/pages/StorePage";
+import { VipPage } from "@/pages/VipPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminInvitesPage } from "@/pages/AdminInvitesPage";
 import { AdminRegisterPage } from "@/pages/AdminRegisterPage";
@@ -121,6 +123,22 @@ export function App() {
         element={
           <ProtectedLayout>
             <GamesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/store"
+        element={
+          <ProtectedLayout>
+            <StorePage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/vip"
+        element={
+          <ProtectedLayout>
+            <VipPage />
           </ProtectedLayout>
         }
       />

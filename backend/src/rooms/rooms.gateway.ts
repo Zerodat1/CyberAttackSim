@@ -88,4 +88,9 @@ export class RoomsGateway implements OnGatewayInit {
       this.server.to(roomChannel(round.roomId)).emit("room:game_round", round);
     }
   }
+
+  @OnEvent("room.entrance")
+  broadcastEntrance(payload: { roomId: string; userId: string; text: string; colorHex: string; emoji: string }) {
+    this.server.to(roomChannel(payload.roomId)).emit("room:entrance", payload);
+  }
 }

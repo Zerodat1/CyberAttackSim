@@ -18,6 +18,8 @@ import { GiftHistoryScreen } from "@/screens/GiftHistoryScreen";
 import { GameHistoryScreen } from "@/screens/GameHistoryScreen";
 import { HostAgenciesScreen } from "@/screens/HostAgenciesScreen";
 import { HostAgencyDetailScreen } from "@/screens/HostAgencyDetailScreen";
+import { StoreScreen } from "@/screens/StoreScreen";
+import { VipScreen } from "@/screens/VipScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -39,6 +41,8 @@ export type AppStackParamList = {
   GameHistory: undefined;
   HostAgencies: undefined;
   HostAgencyDetail: { agencyId: string };
+  Store: undefined;
+  Vip: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -86,6 +90,8 @@ function AppNavigator() {
       <AppStack.Screen name="GameHistory" component={GameHistoryScreen} options={{ title: "سجل الألعاب" }} />
       <AppStack.Screen name="HostAgencies" component={HostAgenciesScreen} options={{ title: "وكالات المضيفين" }} />
       <AppStack.Screen name="HostAgencyDetail" component={HostAgencyDetailScreen} options={{ title: "الوكالة" }} />
+      <AppStack.Screen name="Store" component={StoreScreen} options={{ title: "المتجر" }} />
+      <AppStack.Screen name="Vip" component={VipScreen} options={{ title: "VIP" }} />
     </AppStack.Navigator>
   );
 }

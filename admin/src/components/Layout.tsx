@@ -20,6 +20,8 @@ import TuneIcon from "@mui/icons-material/Tune";
 import MicIcon from "@mui/icons-material/Mic";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import CasinoIcon from "@mui/icons-material/Casino";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -47,6 +49,8 @@ const NAV_ITEMS: { to: string; label: string; icon: JSX.Element; roles: GlobalRo
   { to: "/rooms", label: "الغرف الصوتية", icon: <MicIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/gifts", label: "كتالوج الهدايا", icon: <CardGiftcardIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/games", label: "ألعاب الرهان", icon: <CasinoIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/store", label: "متجر المظاهر", icon: <StorefrontIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
+  { to: "/vip", label: "مستويات VIP", icon: <WorkspacePremiumIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
   { to: "/admin-invites", label: "دعوات الأدمن", icon: <PersonAddAlt1Icon />, roles: ["OWNER"] },
   { to: "/settings", label: "إعدادات العمولات", icon: <TuneIcon />, roles: ["OWNER", "RECHARGE_MANAGER"] },
 ];

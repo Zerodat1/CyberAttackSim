@@ -139,3 +139,30 @@ export interface RoomSummary {
   owner: { id: string; username: string; fullName: string };
   _count: { members: number };
 }
+
+export type StoreItemCategory = "FRAME" | "ENTRANCE" | "BUBBLE" | "MIC_EFFECT";
+
+export interface StoreItem {
+  id: string;
+  category: StoreItemCategory;
+  name: string;
+  emoji: string;
+  colorHex: string;
+  priceGold: string;
+  durationDays: number | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface VipLevel {
+  level: number;
+  name: string;
+  priceGold: string;
+  durationDays: number;
+  badgeColor: string;
+  frameColorHex: string;
+  frameEmoji: string;
+  entranceText: string;
+  entranceColorHex: string;
+  isActive: boolean;
+}

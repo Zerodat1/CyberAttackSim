@@ -6,7 +6,7 @@ import type { Socket } from "socket.io-client";
 import { apiClient } from "@/api/client";
 import { createSocket } from "@/api/socket";
 import { useAuth } from "@/auth/AuthContext";
-import { colors, radii, spacing } from "@/theme";
+import { colors, hexToRgba, radii, spacing } from "@/theme";
 import type { ChatMessage } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
@@ -76,17 +76,24 @@ export function ChatScreen({ route }: Props) {
         data={[...(messages ?? [])].reverse()}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: spacing.lg }}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.bubble,
-              item.senderId === user?.id ? styles.bubbleMine : styles.bubbleTheirs,
-            ]}
-          >
-            <Text style={styles.bubbleText}>{item.isDeleted ? "تم حذف الرسالة" : item.body}</Text>
-            {item.isEdited && !item.isDeleted && <Text style={styles.editedTag}>(معدلة)</Text>}
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const bubbleColor = item.sender.activeBubble?.colorHex;
+          return (
+            <View
+              style={[
+                styles.bubble,
+                item.senderId === user?.id ? styles.bubbleMine : styles.bubbleTheirs,
+                bubbleColor && { backgroundColor: hexToRgba(bubbleColor, 0.35), borderColor: bubbleColor, borderWidth: 1 },
+              ]}
+            >
+              {item.sender.activeBubble && (
+                <Text style={styles.bubbleEmoji}>{item.sender.activeBubble.emoji}</Text>
+              )}
+              <Text style={styles.bubbleText}>{item.isDeleted ? "تم حذف الرسالة" : item.body}</Text>
+              {item.isEdited && !item.isDeleted && <Text style={styles.editedTag}>(معدلة)</Text>}
+            </View>
+          );
+        }}
       />
       {otherTyping && <Text style={styles.typing}>{otherUserName} يكتب الآن...</Text>}
       <View style={styles.inputRow}>
@@ -115,6 +122,7 @@ const styles = StyleSheet.create({
   bubbleMine: { backgroundColor: colors.primary, alignSelf: "flex-start", borderBottomLeftRadius: 4 },
   bubbleTheirs: { backgroundColor: colors.surface, alignSelf: "flex-end", borderBottomRightRadius: 4 },
   bubbleText: { color: colors.textPrimary, textAlign: "right" },
+  bubbleEmoji: { fontSize: 11, textAlign: "right", marginBottom: 2 },
   editedTag: { color: "#c9cdf2", fontSize: 10, marginTop: 4, textAlign: "right" },
   typing: { color: colors.primaryLight, textAlign: "right", paddingHorizontal: spacing.lg, marginBottom: spacing.xs },
   inputRow: { flexDirection: "row-reverse", padding: spacing.md, gap: spacing.sm },

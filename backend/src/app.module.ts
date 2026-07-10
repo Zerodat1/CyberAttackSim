@@ -18,6 +18,8 @@ import { GamesModule } from "./games/games.module";
 import { HostAgenciesModule } from "./host-agencies/host-agencies.module";
 import { AdminInvitesModule } from "./admin-invites/admin-invites.module";
 import { AdminStatsModule } from "./admin-stats/admin-stats.module";
+import { StoreModule } from "./store/store.module";
+import { VipModule } from "./vip/vip.module";
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { AdminStatsModule } from "./admin-stats/admin-stats.module";
     HostAgenciesModule,
     AdminInvitesModule,
     AdminStatsModule,
+    StoreModule,
+    VipModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

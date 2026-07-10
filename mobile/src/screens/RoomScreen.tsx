@@ -21,8 +21,18 @@ import { GiftModal } from "@/components/GiftModal";
 import { GamesHubModal } from "@/components/GamesHubModal";
 import { RoomSettingsModal } from "@/components/RoomSettingsModal";
 import { colorForName, colors, hexToRgba, radii, spacing } from "@/theme";
-import type { GameRound, GameType, GiftSend, RoomDetail, RoomMemberRole, RoomSeat, UserWallet } from "@/api/types";
+import type {
+  GameRound,
+  GameType,
+  GiftSend,
+  RoomDetail,
+  RoomMemberRole,
+  RoomSeat,
+  UserWallet,
+  VipLevel,
+} from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
+import { resolveFrame, resolveVipBadge } from "@/utils/cosmetics";
 
 const GAME_ICON: Record<GameType, string> = {
   DICE_GUESS: "🎲",
@@ -44,7 +54,8 @@ type Props = NativeStackScreenProps<AppStackParamList, "Room">;
 interface FeedItem {
   id: string;
   text: string;
-  kind: "gift" | "game";
+  kind: "gift" | "game" | "entrance";
+  color?: string;
 }
 
 const ROLE_LABEL: Record<RoomMemberRole, string> = {
@@ -83,6 +94,12 @@ export function RoomScreen({ route, navigation }: Props) {
     queryKey: ["wallet"],
     queryFn: async () => (await apiClient.get<UserWallet>("/wallet/me")).data,
     refetchInterval: 5000,
+  });
+
+  const { data: vipLevels } = useQuery({
+    queryKey: ["vip-levels"],
+    queryFn: async () => (await apiClient.get<VipLevel[]>("/vip/levels")).data,
+    staleTime: 5 * 60 * 1000,
   });
 
   const joinMutation = useMutation({
@@ -131,6 +148,12 @@ export function RoomScreen({ route, navigation }: Props) {
           : `${icon} لاعب راهن ${round.betAmount} وخسر`;
         setFeed((prev) => [{ id: round.id, text: label, kind: "game" as const }, ...prev].slice(0, 20));
       });
+      s.on("room:entrance", (payload: { userId: string; text: string; colorHex: string }) => {
+        if (deafenedRef.current) return;
+        setFeed((prev) =>
+          [{ id: `entrance-${payload.userId}-${Date.now()}`, text: payload.text, kind: "entrance" as const, color: payload.colorHex }, ...prev].slice(0, 20),
+        );
+      });
     });
     return () => {
       socket?.emit("room:leave", { roomId });
@@ -164,6 +187,8 @@ export function RoomScreen({ route, navigation }: Props) {
 
   function renderSeat(seat: RoomSeat, isVip: boolean) {
     const isOwnerSeat = isVip && seat.seatNumber === 1 && !!seat.occupant;
+    const frame = seat.occupant ? resolveFrame(seat.occupant, vipLevels) : null;
+    const micGlow = seat.occupant?.activeMicEffect?.colorHex;
     return (
       <View key={seat.id} style={styles.seatWrapper}>
         {isOwnerSeat && <Text style={styles.crown}>👑</Text>}
@@ -174,11 +199,17 @@ export function RoomScreen({ route, navigation }: Props) {
             isVip && styles.seatCircleVip,
             seat.occupantId && (isOwnerSeat ? styles.seatCircleOwner : styles.seatCircleOccupied),
             seat.isLocked && styles.seatCircleLocked,
+            micGlow && { borderColor: micGlow, borderWidth: 3, shadowColor: micGlow, shadowOpacity: 0.8, shadowRadius: 8, elevation: 6 },
           ]}
           onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
         >
           {seat.occupant ? (
-            <Avatar name={seat.occupant.username} size={isVip ? 60 : 52} />
+            <Avatar
+              name={seat.occupant.username}
+              size={isVip ? 60 : 52}
+              frameColor={frame?.color}
+              frameEmoji={frame?.emoji}
+            />
           ) : (
             <Text style={styles.seatIcon}>{seat.isLocked ? "🔒" : "🛋️"}</Text>
           )}
@@ -238,11 +269,20 @@ export function RoomScreen({ route, navigation }: Props) {
 
         <TouchableOpacity style={styles.membersStrip} onPress={() => setMembersModalVisible(true)}>
           <View style={styles.membersAvatars}>
-            {visibleMembers.map((member, index) => (
-              <View key={member.id} style={[styles.memberAvatarOverlap, { marginStart: index === 0 ? 0 : -12 }]}>
-                <Avatar name={member.user.username} imageUrl={member.user.avatarUrl} size={28} />
-              </View>
-            ))}
+            {visibleMembers.map((member, index) => {
+              const frame = resolveFrame(member.user, vipLevels);
+              return (
+                <View key={member.id} style={[styles.memberAvatarOverlap, { marginStart: index === 0 ? 0 : -12 }]}>
+                  <Avatar
+                    name={member.user.username}
+                    imageUrl={member.user.avatarUrl}
+                    size={28}
+                    frameColor={frame?.color}
+                    frameEmoji={frame?.emoji}
+                  />
+                </View>
+              );
+            })}
             {extraMemberCount > 0 && (
               <View style={[styles.memberAvatarOverlap, styles.memberExtraBubble, { marginStart: -12 }]}>
                 <Text style={styles.memberExtraText}>+{extraMemberCount}</Text>
@@ -259,7 +299,15 @@ export function RoomScreen({ route, navigation }: Props) {
                 key={item.id}
                 style={[
                   styles.feedBubble,
-                  { borderStartColor: item.kind === "gift" ? colors.gold : colors.primaryLight },
+                  {
+                    borderStartColor:
+                      item.kind === "entrance"
+                        ? item.color ?? colors.giftPink
+                        : item.kind === "gift"
+                          ? colors.gold
+                          : colors.primaryLight,
+                  },
+                  item.kind === "entrance" && item.color && { backgroundColor: hexToRgba(item.color, 0.16) },
                 ]}
               >
                 <Text style={styles.feedText}>{item.text}</Text>
@@ -313,18 +361,35 @@ export function RoomScreen({ route, navigation }: Props) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>الأعضاء ({room.members.length})</Text>
             <ScrollView>
-              {room.members.map((member) => (
-                <View key={member.id} style={styles.memberRow}>
-                  <View style={styles.memberRoleBadge}>
-                    <Text style={styles.memberRole}>{ROLE_LABEL[member.role]}</Text>
+              {room.members.map((member) => {
+                const frame = resolveFrame(member.user, vipLevels);
+                const vipBadge = resolveVipBadge(member.user, vipLevels);
+                return (
+                  <View key={member.id} style={styles.memberRow}>
+                    <View style={styles.memberRoleBadge}>
+                      <Text style={styles.memberRole}>{ROLE_LABEL[member.role]}</Text>
+                    </View>
+                    <View style={styles.memberInfo}>
+                      <View style={styles.memberNameRow}>
+                        {vipBadge && (
+                          <View style={styles.vipChip}>
+                            <Text style={styles.vipChipText}>👑 {vipBadge}</Text>
+                          </View>
+                        )}
+                        <Text style={styles.memberName}>{member.user.fullName}</Text>
+                      </View>
+                      <Text style={styles.memberUsername}>@{member.user.username}</Text>
+                    </View>
+                    <Avatar
+                      name={member.user.username}
+                      imageUrl={member.user.avatarUrl}
+                      size={36}
+                      frameColor={frame?.color}
+                      frameEmoji={frame?.emoji}
+                    />
                   </View>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>{member.user.fullName}</Text>
-                    <Text style={styles.memberUsername}>@{member.user.username}</Text>
-                  </View>
-                  <Avatar name={member.user.username} imageUrl={member.user.avatarUrl} size={36} />
-                </View>
-              ))}
+                );
+              })}
             </ScrollView>
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setMembersModalVisible(false)}>
               <Text style={styles.joinButtonText}>إغلاق</Text>
@@ -563,6 +628,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   memberInfo: { flex: 1, marginEnd: spacing.md, alignItems: "flex-end" },
+  memberNameRow: { flexDirection: "row-reverse", alignItems: "center", gap: 6 },
+  vipChip: { backgroundColor: "rgba(255,215,0,0.15)", borderRadius: radii.pill, paddingHorizontal: 6, paddingVertical: 1 },
+  vipChipText: { color: colors.gold, fontSize: 10, fontWeight: "800" },
   memberName: { color: colors.textPrimary, fontWeight: "600" },
   memberUsername: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   memberRoleBadge: {

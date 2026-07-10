@@ -20,6 +20,12 @@ export interface UserProfile {
   globalRole: string;
   twoFactorEnabled: boolean;
   createdAt: string;
+  vipLevel: number | null;
+  vipExpiresAt: string | null;
+  activeFrame: { emoji: string; colorHex: string } | null;
+  activeEntrance: { emoji: string; colorHex: string } | null;
+  activeBubble: { emoji: string; colorHex: string } | null;
+  activeMicEffect: { emoji: string; colorHex: string } | null;
 }
 
 export interface RechargeWallet {
@@ -67,13 +73,20 @@ export interface RoomSummary {
   _count: { members: number };
 }
 
+export interface UserCosmetics {
+  vipLevel: number | null;
+  vipExpiresAt: string | null;
+  activeFrame: { emoji: string; colorHex: string } | null;
+  activeMicEffect: { emoji: string; colorHex: string } | null;
+}
+
 export interface RoomSeat {
   id: string;
   seatNumber: number;
   occupantId: string | null;
   isLocked: boolean;
   isMuted: boolean;
-  occupant: { id: string; username: string; avatarUrl: string | null } | null;
+  occupant: ({ id: string; username: string; avatarUrl: string | null } & UserCosmetics) | null;
 }
 
 export type RoomMemberRole = "OWNER" | "CO_OWNER" | "ADMIN" | "MODERATOR" | "MEMBER";
@@ -84,7 +97,7 @@ export interface RoomMember {
   role: RoomMemberRole;
   isMuted: boolean;
   isBanned: boolean;
-  user: { id: string; username: string; fullName: string; avatarUrl: string | null };
+  user: { id: string; username: string; fullName: string; avatarUrl: string | null } & UserCosmetics;
 }
 
 export interface RoomDetail {
@@ -114,7 +127,12 @@ export interface ChatMessage {
   isEdited: boolean;
   isDeleted: boolean;
   createdAt: string;
-  sender: { id: string; username: string; avatarUrl: string | null };
+  sender: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+    activeBubble: { emoji: string; colorHex: string } | null;
+  };
 }
 
 export interface UserWallet {
@@ -261,4 +279,54 @@ export interface HostAgencyMembership {
   role: HostAgencyRole;
   joinedAt: string;
   agency: HostAgencySummary;
+}
+
+export type StoreItemCategory = "FRAME" | "ENTRANCE" | "BUBBLE" | "MIC_EFFECT";
+
+export interface StoreItem {
+  id: string;
+  category: StoreItemCategory;
+  name: string;
+  emoji: string;
+  colorHex: string;
+  priceGold: string;
+  durationDays: number | null;
+  isActive: boolean;
+  owned: boolean;
+  expiresAt: string | null;
+}
+
+export interface OwnedStoreItem extends StoreItem {
+  purchasedAt: string;
+  expired: boolean;
+}
+
+export interface StoreInventory {
+  items: OwnedStoreItem[];
+  equipped: {
+    activeFrameId: string | null;
+    activeEntranceId: string | null;
+    activeBubbleId: string | null;
+    activeMicEffectId: string | null;
+  };
+}
+
+export interface VipLevel {
+  level: number;
+  name: string;
+  priceGold: string;
+  durationDays: number;
+  badgeColor: string;
+  frameColorHex: string;
+  frameEmoji: string;
+  entranceText: string;
+  entranceColorHex: string;
+  isActive: boolean;
+}
+
+export interface VipStatus {
+  vipLevel: number | null;
+  vipExpiresAt: string | null;
+  isActive: boolean;
+  current: VipLevel | null;
 }

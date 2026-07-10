@@ -18,6 +18,18 @@ export interface RoomEventPayload {
 }
 
 const ROOM_EVENT = "room.event";
+const ROOM_ENTRANCE_EVENT = "room.entrance";
+
+const userWithCosmeticsSelect = {
+  id: true,
+  username: true,
+  fullName: true,
+  avatarUrl: true,
+  vipLevel: true,
+  vipExpiresAt: true,
+  activeFrame: { select: { emoji: true, colorHex: true } },
+  activeMicEffect: { select: { emoji: true, colorHex: true } },
+} as const;
 
 @Injectable()
 export class RoomsService {
@@ -98,10 +110,10 @@ export class RoomsService {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
       include: {
-        seats: { orderBy: { seatNumber: "asc" }, include: { occupant: { select: { id: true, username: true, avatarUrl: true } } } },
+        seats: { orderBy: { seatNumber: "asc" }, include: { occupant: { select: userWithCosmeticsSelect } } },
         members: {
           where: { isBanned: false },
-          include: { user: { select: { id: true, username: true, fullName: true, avatarUrl: true } } },
+          include: { user: { select: userWithCosmeticsSelect } },
         },
       },
     });
@@ -165,7 +177,49 @@ export class RoomsService {
     });
 
     await this.emitEvent({ roomId, type: "MEMBER_JOINED", actorId: userId });
+
+    const announcement = await this.getEntranceAnnouncement(userId);
+    if (announcement) {
+      this.events.emit(ROOM_ENTRANCE_EVENT, { roomId, userId, ...announcement });
+    }
+
     return membership;
+  }
+
+  private async getEntranceAnnouncement(
+    userId: string,
+  ): Promise<{ text: string; colorHex: string; emoji: string } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        username: true,
+        vipLevel: true,
+        vipExpiresAt: true,
+        activeEntrance: { select: { name: true, emoji: true, colorHex: true } },
+      },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    const vipActive = !!user.vipLevel && !!user.vipExpiresAt && user.vipExpiresAt > new Date();
+    if (vipActive) {
+      const vip = await this.prisma.vipLevel.findUnique({ where: { level: user.vipLevel! } });
+      if (vip) {
+        return { text: vip.entranceText, colorHex: vip.entranceColorHex, emoji: vip.frameEmoji };
+      }
+    }
+
+    if (user.activeEntrance) {
+      return {
+        text: `${user.activeEntrance.emoji} دخل ${user.username} إلى الغرفة`,
+        colorHex: user.activeEntrance.colorHex,
+        emoji: user.activeEntrance.emoji,
+      };
+    }
+
+    return null;
   }
 
   async leaveRoom(roomId: string, membershipId: string, userId: string, role: RoomMemberRole) {

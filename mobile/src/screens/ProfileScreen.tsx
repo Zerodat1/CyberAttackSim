@@ -16,8 +16,9 @@ import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { colors, radii, spacing, typography } from "@/theme";
-import type { HostAgencyMembership, UserProfile } from "@/api/types";
+import type { HostAgencyMembership, UserProfile, VipLevel } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
+import { resolveFrame, resolveVipBadge } from "@/utils/cosmetics";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Profile">;
 
@@ -30,6 +31,8 @@ const ROLE_LABEL: Record<string, string> = {
 const MENU_ITEMS = [
   { icon: "🎙️", label: "الغرف الصوتية", screen: "RoomsList" as const },
   { icon: "💬", label: "الرسائل", screen: "ConversationsList" as const },
+  { icon: "🛍️", label: "المتجر", screen: "Store" as const },
+  { icon: "👑", label: "VIP", screen: "Vip" as const },
   { icon: "🎁", label: "سجل الهدايا", screen: "GiftHistory" as const },
   { icon: "🎲", label: "سجل الألعاب", screen: "GameHistory" as const },
 ];
@@ -58,6 +61,12 @@ export function ProfileScreen({ navigation }: Props) {
   const { data: agencyMembership } = useQuery({
     queryKey: ["my-host-agency"],
     queryFn: async () => (await apiClient.get<HostAgencyMembership | null>("/host-agencies/me")).data,
+  });
+
+  const { data: vipLevels } = useQuery({
+    queryKey: ["vip-levels"],
+    queryFn: async () => (await apiClient.get<VipLevel[]>("/vip/levels")).data,
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -101,6 +110,9 @@ export function ProfileScreen({ navigation }: Props) {
     );
   }
 
+  const profileFrame = resolveFrame(profile, vipLevels);
+  const vipBadgeLabel = resolveVipBadge(profile, vipLevels);
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
       <LinearGradient colors={[colors.primary, "#8a3ffb"]} style={styles.header}>
@@ -108,8 +120,14 @@ export function ProfileScreen({ navigation }: Props) {
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
 
-        <View style={styles.avatarRing}>
-          <Avatar name={profile.fullName} imageUrl={editing ? avatarUrl : profile.avatarUrl} size={88} />
+        <View style={[styles.avatarRing, profileFrame && { borderColor: profileFrame.color }]}>
+          <Avatar
+            name={profile.fullName}
+            imageUrl={editing ? avatarUrl : profile.avatarUrl}
+            size={88}
+            frameColor={profileFrame?.color}
+            frameEmoji={profileFrame?.emoji}
+          />
         </View>
         <Text style={styles.name}>{profile.fullName}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
@@ -119,8 +137,15 @@ export function ProfileScreen({ navigation }: Props) {
           <Text style={styles.copyIcon}>{copied ? "✓" : "📋"}</Text>
         </TouchableOpacity>
 
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>{ROLE_LABEL[profile.globalRole] ?? profile.globalRole}</Text>
+        <View style={styles.badgesRow}>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{ROLE_LABEL[profile.globalRole] ?? profile.globalRole}</Text>
+          </View>
+          {vipBadgeLabel && (
+            <View style={[styles.roleBadge, { backgroundColor: "rgba(0,0,0,0.25)" }]}>
+              <Text style={styles.roleBadgeText}>👑 {vipBadgeLabel}</Text>
+            </View>
+          )}
         </View>
       </LinearGradient>
 
@@ -298,12 +323,12 @@ const styles = StyleSheet.create({
   },
   idText: { color: "#fff", fontSize: 12 },
   copyIcon: { fontSize: 12 },
+  badgesRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
   roleBadge: {
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
-    marginTop: spacing.sm,
   },
   roleBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   body: { padding: spacing.xl, marginTop: -spacing.lg },
