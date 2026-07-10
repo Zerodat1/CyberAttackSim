@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { apiClient } from "@/api/client";
+import { FormField } from "@/components/FormField";
+import { colors, radii, spacing, typography } from "@/theme";
 
 export function WithdrawalRequestScreen() {
   const [amount, setAmount] = useState("");
@@ -35,27 +37,40 @@ export function WithdrawalRequestScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>طلب سحب الأرباح</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="المبلغ"
-        value={amount}
-        onChangeText={setAmount}
-        keyboardType="numeric"
-      />
-      <TextInput style={styles.input} placeholder="طريقة السحب" value={method} onChangeText={setMethod} />
-      <TextInput
-        style={styles.input}
-        placeholder="رقم الحساب"
-        value={accountNumber}
-        onChangeText={setAccountNumber}
-      />
-      <TextInput style={styles.input} placeholder="ملاحظات (اختياري)" value={notes} onChangeText={setNotes} />
-      {error && <Text style={styles.error}>{error}</Text>}
-      {success && <Text style={styles.success}>{success}</Text>}
+    <View style={styles.screen}>
+      <Text style={styles.subtitle}>اطلب سحب أرباحك المتاحة إلى الحساب الذي تختاره</Text>
+
+      <View style={styles.card}>
+        <FormField
+          label="المبلغ"
+          placeholder="0.00"
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="numeric"
+        />
+        <FormField label="طريقة السحب" placeholder="تحويل بنكي، محفظة إلكترونية..." value={method} onChangeText={setMethod} />
+        <FormField
+          label="رقم الحساب"
+          placeholder="رقم الحساب أو المحفظة"
+          value={accountNumber}
+          onChangeText={setAccountNumber}
+        />
+        <FormField label="ملاحظات (اختياري)" placeholder="أي تفاصيل إضافية" value={notes} onChangeText={setNotes} />
+      </View>
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      {success && (
+        <View style={styles.successBanner}>
+          <Text style={styles.successText}>{success}</Text>
+        </View>
+      )}
+
       <TouchableOpacity
-        style={[styles.button, (!amount || !method || !accountNumber) && styles.buttonDisabled]}
+        style={[styles.button, (!amount || !method || !accountNumber || submitting) && styles.buttonDisabled]}
         onPress={handleSubmit}
         disabled={!amount || !method || !accountNumber || submitting}
       >
@@ -66,20 +81,30 @@ export function WithdrawalRequestScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: "#0f1020" },
-  title: { fontSize: 22, fontWeight: "700", color: "#fff", textAlign: "right", marginBottom: 20 },
-  input: {
-    backgroundColor: "#1c1e3a",
-    color: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 14,
+  screen: { flex: 1, backgroundColor: colors.background, padding: spacing.xxl },
+  subtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
     textAlign: "right",
+    marginBottom: spacing.xl,
+    lineHeight: 20,
   },
-  button: { backgroundColor: "#5b4cf5", borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+  card: { backgroundColor: colors.surfaceAlt, borderRadius: radii.xl, padding: spacing.lg, marginBottom: spacing.lg },
+  errorBanner: {
+    backgroundColor: "rgba(255,107,107,0.12)",
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  errorText: { color: colors.danger, textAlign: "center", fontSize: 13 },
+  successBanner: {
+    backgroundColor: "rgba(76,217,100,0.12)",
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  successText: { color: colors.success, textAlign: "center", fontSize: 13 },
+  button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 16, alignItems: "center" },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontWeight: "700" },
-  error: { color: "#ff6b6b", textAlign: "center", marginBottom: 8 },
-  success: { color: "#4cd964", textAlign: "center", marginBottom: 8 },
+  buttonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });
