@@ -4,6 +4,7 @@ import * as argon2 from "argon2";
 import { Prisma, RoomEventType, RoomMemberRole } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { AgoraService } from "../agora/agora.service";
 import { CreateRoomDto } from "./dto/create-room.dto";
 import { UpdateRoomDto } from "./dto/update-room.dto";
 import { JoinRoomDto } from "./dto/join-room.dto";
@@ -37,7 +38,13 @@ export class RoomsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly events: EventEmitter2,
+    private readonly agora: AgoraService,
   ) {}
+
+  async getAgoraToken(roomId: string, userId: string) {
+    const seat = await this.prisma.roomSeat.findFirst({ where: { roomId, occupantId: userId } });
+    return this.agora.buildRtcToken(roomId, userId, !!seat);
+  }
 
   private async emitEvent(payload: RoomEventPayload) {
     const event = await this.prisma.roomEvent.create({

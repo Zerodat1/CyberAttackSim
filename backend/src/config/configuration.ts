@@ -25,4 +25,19 @@ export default () => ({
       process.env.RECHARGE_LARGE_TRANSACTION_THRESHOLD || "1000",
     ),
   },
+  storage: {
+    endpoint: process.env.STORAGE_ENDPOINT,
+    region: process.env.STORAGE_REGION || "auto",
+    bucket: process.env.STORAGE_BUCKET,
+    accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
+    secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY,
+    publicBaseUrl: process.env.STORAGE_PUBLIC_BASE_URL,
+  },
+  firebase: {
+    serviceAccountJsonBase64: process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64,
+  },
+  agora: {
+    appId: process.env.AGORA_APP_ID,
+    appCertificate: process.env.AGORA_APP_CERTIFICATE,
+  },
 });

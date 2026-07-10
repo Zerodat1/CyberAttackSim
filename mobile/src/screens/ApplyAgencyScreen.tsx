@@ -6,6 +6,7 @@ import { apiClient } from "@/api/client";
 import { FormField } from "@/components/FormField";
 import { colors, radii, spacing, typography } from "@/theme";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
+import { uploadImageDataUri } from "@/utils/uploadImage";
 
 type Props = NativeStackScreenProps<AppStackParamList, "ApplyAgency">;
 
@@ -17,6 +18,7 @@ export function ApplyAgencyScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [idDocumentUrl, setIdDocumentUrl] = useState("");
+  const [uploadingIdDocument, setUploadingIdDocument] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,9 +36,17 @@ export function ApplyAgencyScreen({ navigation }: Props) {
       base64: true,
     });
     const asset = result.canceled ? null : result.assets[0];
-    if (asset?.base64) {
+    if (!asset?.base64) return;
+
+    setUploadingIdDocument(true);
+    try {
       const mime = asset.mimeType ?? "image/jpeg";
-      setIdDocumentUrl(`data:${mime};base64,${asset.base64}`);
+      const url = await uploadImageDataUri(`data:${mime};base64,${asset.base64}`, "id-documents");
+      setIdDocumentUrl(url);
+    } catch {
+      setError("تعذر رفع صورة الهوية، حاول مجددًا");
+    } finally {
+      setUploadingIdDocument(false);
     }
   }
 
@@ -101,8 +111,10 @@ export function ApplyAgencyScreen({ navigation }: Props) {
         </View>
         <View style={styles.idField}>
           <Text style={styles.paymentLabel}>صورة الهوية</Text>
-          <TouchableOpacity style={styles.idUpload} onPress={pickIdDocument}>
-            {idDocumentUrl ? (
+          <TouchableOpacity style={styles.idUpload} onPress={pickIdDocument} disabled={uploadingIdDocument}>
+            {uploadingIdDocument ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : idDocumentUrl ? (
               <Image source={{ uri: idDocumentUrl }} style={styles.idPreview} resizeMode="cover" />
             ) : (
               <>

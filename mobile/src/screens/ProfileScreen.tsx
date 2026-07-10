@@ -20,6 +20,7 @@ import { colors, radii, spacing, typography } from "@/theme";
 import type { Gender, HostAgencyMembership, LevelInfo, UserProfile, VipLevel } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 import { resolveFrame, resolveVipBadge } from "@/utils/cosmetics";
+import { uploadImageDataUri } from "@/utils/uploadImage";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Profile">;
 
@@ -53,6 +54,7 @@ export function ProfileScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [gender, setGender] = useState<Gender | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -136,9 +138,17 @@ export function ProfileScreen({ navigation }: Props) {
       base64: true,
     });
     const asset = result.canceled ? null : result.assets[0];
-    if (asset?.base64) {
+    if (!asset?.base64) return;
+
+    setUploadingAvatar(true);
+    try {
       const mime = asset.mimeType ?? "image/jpeg";
-      setAvatarUrl(`data:${mime};base64,${asset.base64}`);
+      const url = await uploadImageDataUri(`data:${mime};base64,${asset.base64}`, "avatars");
+      setAvatarUrl(url);
+    } catch {
+      setError("تعذر رفع الصورة، حاول مجددًا");
+    } finally {
+      setUploadingAvatar(false);
     }
   }
 
@@ -168,7 +178,7 @@ export function ProfileScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={[styles.avatarRing, profileFrame && { borderColor: profileFrame.color }]}
-          onPress={editing ? pickImage : undefined}
+          onPress={editing && !uploadingAvatar ? pickImage : undefined}
           activeOpacity={editing ? 0.7 : 1}
         >
           <Avatar
@@ -180,7 +190,11 @@ export function ProfileScreen({ navigation }: Props) {
           />
           {editing && (
             <View style={styles.cameraBadge}>
-              <Text style={styles.cameraBadgeText}>📷</Text>
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.cameraBadgeText}>📷</Text>
+              )}
             </View>
           )}
         </TouchableOpacity>

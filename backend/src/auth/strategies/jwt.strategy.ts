@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { PrismaService } from "../../prisma/prisma.service";
+import { CacheService } from "../../redis/cache.service";
 import { AuthenticatedUser } from "../../common/types/authenticated-user";
 
 export interface JwtAccessPayload {
@@ -10,11 +11,15 @@ export interface JwtAccessPayload {
   sessionId: string;
 }
 
+export const sessionCacheKey = (sessionId: string) => `session-auth:${sessionId}`;
+const SESSION_CACHE_TTL_SECONDS = 30;
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -24,6 +29,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtAccessPayload): Promise<AuthenticatedUser> {
+    const cacheKey = sessionCacheKey(payload.sessionId);
+    const cached = await this.cache.get<AuthenticatedUser>(cacheKey);
+    if (cached && cached.id === payload.sub) {
+      return cached;
+    }
+
     const session = await this.prisma.session.findUnique({
       where: { id: payload.sessionId },
       include: { user: true },
@@ -39,11 +50,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("Session is no longer valid");
     }
 
-    return {
+    const authenticatedUser: AuthenticatedUser = {
       id: session.user.id,
       username: session.user.username,
       globalRole: session.user.globalRole,
       sessionId: session.id,
     };
+
+    await this.cache.set(cacheKey, authenticatedUser, SESSION_CACHE_TTL_SECONDS);
+
+    return authenticatedUser;
   }
 }

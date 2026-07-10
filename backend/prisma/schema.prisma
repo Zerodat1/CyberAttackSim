@@ -212,6 +212,8 @@ model User {
 
   bannedIps BannedIp[] @relation("IpBannedBy")
 
+  deviceTokens DeviceToken[]
+
   @@index([globalRole])
 }
 
@@ -280,6 +282,17 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, isRead])
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model AuditLog {

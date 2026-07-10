@@ -1,0 +1,11 @@
+[Unit]
+Description=Code platform: PostgreSQL + uploads backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/code
+Environment=BACKUP_DIR=/opt/code/backups
+Environment=BACKUP_RETENTION_DAYS=14
+ExecStart=/opt/code/deploy/backup/backup.sh

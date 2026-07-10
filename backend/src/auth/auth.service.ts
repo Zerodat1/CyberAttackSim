@@ -11,6 +11,8 @@ import { authenticator } from "otplib";
 import { nanoid } from "nanoid";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { CacheService } from "../redis/cache.service";
+import { sessionCacheKey } from "./strategies/jwt.strategy";
 import { NotificationsService } from "../notifications/notifications.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -31,6 +33,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
+    private readonly cache: CacheService,
   ) {}
 
   async register(dto: RegisterDto, ctx: RequestContext) {
@@ -176,13 +179,19 @@ export class AuthService {
       where: { id: sessionId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    await this.cache.del(sessionCacheKey(sessionId));
   }
 
   async logoutAllDevices(userId: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null },
+      select: { id: true },
+    });
     await this.prisma.session.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    await Promise.all(sessions.map((session) => this.cache.del(sessionCacheKey(session.id))));
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto, currentSessionId: string) {
@@ -195,10 +204,15 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.newPassword);
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 
+    const otherSessions = await this.prisma.session.findMany({
+      where: { userId, id: { not: currentSessionId }, revokedAt: null },
+      select: { id: true },
+    });
     await this.prisma.session.updateMany({
       where: { userId, id: { not: currentSessionId }, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    await Promise.all(otherSessions.map((session) => this.cache.del(sessionCacheKey(session.id))));
 
     await this.notifications.send(
       userId,

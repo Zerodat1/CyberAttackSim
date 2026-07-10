@@ -9,6 +9,8 @@ coverage/
 .turbo/
 backend/generated/
 backend/prisma/migrations/dev/
+backend/uploads/
+*.rdb
 mobile/ios/Pods/
 mobile/android/.gradle/
 mobile/android/app/build/

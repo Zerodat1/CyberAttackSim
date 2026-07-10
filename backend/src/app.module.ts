@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { APP_GUARD } from "@nestjs/core";
+import { LoggerModule } from "nestjs-pino";
 import configuration from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
@@ -22,10 +23,23 @@ import { StoreModule } from "./store/store.module";
 import { VipModule } from "./vip/vip.module";
 import { AdminUsersModule } from "./admin-users/admin-users.module";
 import { IpBanGuard } from "./common/guards/ip-ban.guard";
+import { StorageModule } from "./storage/storage.module";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.LOG_LEVEL || "info",
+        transport:
+          process.env.NODE_ENV === "production"
+            ? undefined
+            : { target: "pino-pretty", options: { singleLine: true, colorize: true } },
+        redact: ["req.headers.authorization", "req.headers.cookie"],
+        autoLogging: { ignore: (req) => req.url === "/api/v1/health" },
+      },
+    }),
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
@@ -55,6 +69,8 @@ import { IpBanGuard } from "./common/guards/ip-ban.guard";
     StoreModule,
     VipModule,
     AdminUsersModule,
+    StorageModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: IpBanGuard },

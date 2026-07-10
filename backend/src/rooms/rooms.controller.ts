@@ -52,6 +52,12 @@ export class RoomsController {
   }
 
   @UseGuards(RoomMemberGuard)
+  @Get(":id/agora-token")
+  getAgoraToken(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.roomsService.getAgoraToken(id, user.id);
+  }
+
+  @UseGuards(RoomMemberGuard)
   @Post(":id/leave")
   leave(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser, @CurrentMembership() membership: Membership) {
     return this.roomsService.leaveRoom(id, membership.id, user.id, membership.role);

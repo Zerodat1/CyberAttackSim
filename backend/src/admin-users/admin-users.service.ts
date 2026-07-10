@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { GlobalRole, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { CacheService } from "../redis/cache.service";
+import { sessionCacheKey } from "../auth/strategies/jwt.strategy";
 import { BanIpDto } from "./dto/ban-ip.dto";
 
 const ADMIN_USER_SELECT = {
@@ -19,7 +21,10 @@ const ADMIN_USER_SELECT = {
 
 @Injectable()
 export class AdminUsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async listUsers(search?: string, page = 1, pageSize = 20) {
     const where: Prisma.UserWhereInput = search
@@ -60,6 +65,11 @@ export class AdminUsersService {
       throw new BadRequestException("Cannot ban another owner account");
     }
 
+    const sessions = await this.prisma.session.findMany({
+      where: { userId: targetUserId, revokedAt: null },
+      select: { id: true },
+    });
+
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: targetUserId },
@@ -70,6 +80,8 @@ export class AdminUsersService {
         data: { revokedAt: new Date() },
       }),
     ]);
+
+    await Promise.all(sessions.map((session) => this.cache.del(sessionCacheKey(session.id))));
 
     return this.prisma.user.findUnique({ where: { id: targetUserId }, select: ADMIN_USER_SELECT });
   }

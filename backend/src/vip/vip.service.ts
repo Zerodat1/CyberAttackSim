@@ -1,17 +1,27 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { WalletService } from "../wallet/wallet.service";
+import { CacheService } from "../redis/cache.service";
 import { UpdateVipLevelDto } from "./dto/update-vip-level.dto";
+
+const VIP_LEVELS_CACHE_KEY = "vip-levels:active";
+const VIP_LEVELS_CACHE_TTL_SECONDS = 300;
 
 @Injectable()
 export class VipService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    private readonly cache: CacheService,
   ) {}
 
-  listLevels() {
-    return this.prisma.vipLevel.findMany({ where: { isActive: true }, orderBy: { level: "asc" } });
+  async listLevels() {
+    const cached = await this.cache.get(VIP_LEVELS_CACHE_KEY);
+    if (cached) return cached;
+
+    const levels = await this.prisma.vipLevel.findMany({ where: { isActive: true }, orderBy: { level: "asc" } });
+    await this.cache.set(VIP_LEVELS_CACHE_KEY, levels, VIP_LEVELS_CACHE_TTL_SECONDS);
+    return levels;
   }
 
   async myStatus(userId: string) {
@@ -60,6 +70,8 @@ export class VipService {
     if (!existing) {
       throw new NotFoundException("VIP level not found");
     }
-    return this.prisma.vipLevel.update({ where: { level }, data: dto });
+    const updated = await this.prisma.vipLevel.update({ where: { level }, data: dto });
+    await this.cache.del(VIP_LEVELS_CACHE_KEY);
+    return updated;
   }
 }
