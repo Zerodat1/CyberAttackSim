@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { computeLevel } from "./utils/levels.util";
 
 const PUBLIC_SELECT = {
   id: true,
@@ -11,6 +13,7 @@ const PUBLIC_SELECT = {
   avatarUrl: true,
   bio: true,
   country: true,
+  gender: true,
   globalRole: true,
   twoFactorEnabled: true,
   createdAt: true,
@@ -27,15 +30,34 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getById(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: PUBLIC_SELECT });
+    const [user, wealthSum, charmSum] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id }, select: PUBLIC_SELECT }),
+      this.prisma.giftSend.aggregate({ where: { senderId: id }, _sum: { totalGoldCost: true } }),
+      this.prisma.giftSend.aggregate({ where: { recipientId: id }, _sum: { totalGoldCost: true } }),
+    ]);
+
     if (!user) {
       throw new NotFoundException("User not found");
     }
-    return user;
+
+    return {
+      ...user,
+      levels: {
+        wealth: computeLevel(Number(wealthSum._sum.totalGoldCost ?? 0)),
+        charm: computeLevel(Number(charmSum._sum.totalGoldCost ?? 0)),
+      },
+    };
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
-    return this.prisma.user.update({ where: { id }, data: dto, select: PUBLIC_SELECT });
+    try {
+      return await this.prisma.user.update({ where: { id }, data: dto, select: PUBLIC_SELECT });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictException("This email is already in use");
+      }
+      throw error;
+    }
   }
 
   async getLoginHistory(id: string) {

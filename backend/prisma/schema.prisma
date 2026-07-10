@@ -18,6 +18,11 @@ enum GlobalRole {
   ADMIN
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 enum StoreItemCategory {
   FRAME
   ENTRANCE
@@ -139,6 +144,7 @@ model User {
   avatarUrl           String?
   bio                 String?
   country             String?
+  gender              Gender?
   globalRole          GlobalRole @default(USER)
   isActive            Boolean    @default(true)
   failedLoginAttempts Int        @default(0)

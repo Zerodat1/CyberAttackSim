@@ -11,12 +11,13 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Clipboard from "expo-clipboard";
+import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
 import { colors, radii, spacing, typography } from "@/theme";
-import type { HostAgencyMembership, UserProfile, VipLevel } from "@/api/types";
+import type { Gender, HostAgencyMembership, LevelInfo, UserProfile, VipLevel } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 import { resolveFrame, resolveVipBadge } from "@/utils/cosmetics";
 
@@ -26,6 +27,11 @@ const ROLE_LABEL: Record<string, string> = {
   USER: "مستخدم",
   RECHARGE_MANAGER: "مدير شحن",
   OWNER: "المالك",
+};
+
+const GENDER_LABEL: Record<Gender, string> = {
+  MALE: "ذكر",
+  FEMALE: "أنثى",
 };
 
 const MENU_ITEMS = [
@@ -44,6 +50,8 @@ export function ProfileScreen({ navigation }: Props) {
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [country, setCountry] = useState("");
+  const [email, setEmail] = useState("");
+  const [gender, setGender] = useState<Gender | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -74,6 +82,8 @@ export function ProfileScreen({ navigation }: Props) {
       setFullName(profile.fullName);
       setBio(profile.bio ?? "");
       setCountry(profile.country ?? "");
+      setEmail(profile.email ?? "");
+      setGender(profile.gender ?? undefined);
       setAvatarUrl(profile.avatarUrl ?? "");
     }
   }, [profile]);
@@ -84,6 +94,8 @@ export function ProfileScreen({ navigation }: Props) {
         fullName,
         bio: bio || undefined,
         country: country || undefined,
+        email: email || undefined,
+        gender: gender || undefined,
         avatarUrl: avatarUrl || undefined,
       }),
     onSuccess: async () => {
@@ -92,7 +104,14 @@ export function ProfileScreen({ navigation }: Props) {
       setEditing(false);
       setError(null);
     },
-    onError: () => setError("تعذر حفظ التعديلات، تحقق من صحة البيانات (مثل رابط الصورة)"),
+    onError: (err: any) => {
+      const message = err?.response?.data?.message;
+      setError(
+        typeof message === "string"
+          ? message
+          : "تعذر حفظ التعديلات، تحقق من صحة البيانات (البريد الإلكتروني أو الصورة)",
+      );
+    },
   });
 
   async function copyId() {
@@ -100,6 +119,27 @@ export function ProfileScreen({ navigation }: Props) {
     await Clipboard.setStringAsync(profile.id);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function pickImage() {
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("يجب السماح بالوصول إلى الصور لتغيير صورة الملف الشخصي");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+    const asset = result.canceled ? null : result.assets[0];
+    if (asset?.base64) {
+      const mime = asset.mimeType ?? "image/jpeg";
+      setAvatarUrl(`data:${mime};base64,${asset.base64}`);
+    }
   }
 
   if (isLoading || !profile) {
@@ -120,7 +160,17 @@ export function ProfileScreen({ navigation }: Props) {
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
 
-        <View style={[styles.avatarRing, profileFrame && { borderColor: profileFrame.color }]}>
+        {!editing && (
+          <TouchableOpacity style={styles.editIconButton} onPress={() => setEditing(true)}>
+            <Text style={styles.editIconText}>✏️</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={[styles.avatarRing, profileFrame && { borderColor: profileFrame.color }]}
+          onPress={editing ? pickImage : undefined}
+          activeOpacity={editing ? 0.7 : 1}
+        >
           <Avatar
             name={profile.fullName}
             imageUrl={editing ? avatarUrl : profile.avatarUrl}
@@ -128,7 +178,12 @@ export function ProfileScreen({ navigation }: Props) {
             frameColor={profileFrame?.color}
             frameEmoji={profileFrame?.emoji}
           />
-        </View>
+          {editing && (
+            <View style={styles.cameraBadge}>
+              <Text style={styles.cameraBadgeText}>📷</Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <Text style={styles.name}>{profile.fullName}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
 
@@ -163,6 +218,11 @@ export function ProfileScreen({ navigation }: Props) {
             </View>
           </LinearGradient>
         )}
+
+        <View style={styles.levelsRow}>
+          <LevelCard icon="💰" label="مستوى الثروة" info={profile.levels.wealth} color={colors.gold} />
+          <LevelCard icon="✨" label="مستوى الجاذبية" info={profile.levels.charm} color={colors.giftPink} />
+        </View>
 
         <TouchableOpacity style={styles.agencyCard} onPress={() => navigation.navigate("HostAgencies")}>
           <Text style={styles.agencyChevron}>›</Text>
@@ -202,15 +262,13 @@ export function ProfileScreen({ navigation }: Props) {
 
             <View style={styles.card}>
               <InfoRow label="الدولة" value={profile.country ?? "غير محددة"} />
+              <InfoRow label="الجنس" value={profile.gender ? GENDER_LABEL[profile.gender] : "غير محدد"} />
               <InfoRow label="البريد الإلكتروني" value={profile.email ?? "—"} />
               <InfoRow label="رقم الهاتف" value={profile.phone ?? "—"} />
               <InfoRow label="المصادقة الثنائية" value={profile.twoFactorEnabled ? "مفعّلة" : "غير مفعّلة"} />
               <InfoRow label="تاريخ الانضمام" value={new Date(profile.createdAt).toLocaleDateString("ar")} last />
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
-              <Text style={styles.buttonText}>تعديل الملف الشخصي</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.logoutButton} onPress={() => logout()}>
               <Text style={styles.logoutText}>تسجيل الخروج</Text>
             </TouchableOpacity>
@@ -234,14 +292,28 @@ export function ProfileScreen({ navigation }: Props) {
             <Text style={styles.fieldLabel}>الدولة</Text>
             <TextInput style={styles.input} value={country} onChangeText={setCountry} />
 
-            <Text style={styles.fieldLabel}>رابط صورة الملف الشخصي</Text>
+            <Text style={styles.fieldLabel}>الجنس</Text>
+            <View style={styles.genderRow}>
+              {(Object.keys(GENDER_LABEL) as Gender[]).map((value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[styles.genderOption, gender === value && styles.genderOptionActive]}
+                  onPress={() => setGender(value)}
+                >
+                  <Text style={[styles.genderOptionText, gender === value && styles.genderOptionTextActive]}>
+                    {GENDER_LABEL[value]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.fieldLabel}>البريد الإلكتروني</Text>
             <TextInput
               style={styles.input}
-              value={avatarUrl}
-              onChangeText={setAvatarUrl}
-              placeholder="https://..."
-              placeholderTextColor={colors.textMuted}
+              value={email}
+              onChangeText={setEmail}
               autoCapitalize="none"
+              keyboardType="email-address"
             />
 
             {error && <Text style={styles.error}>{error}</Text>}
@@ -284,6 +356,36 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
   );
 }
 
+function LevelCard({ icon, label, info, color }: { icon: string; label: string; info: LevelInfo; color: string }) {
+  const progressPct = Math.max(0, Math.min(1, info.progress)) * 100;
+  return (
+    <View style={levelStyles.card}>
+      <View style={levelStyles.headerRow}>
+        <Text style={[levelStyles.levelValue, { color }]}>Lv.{info.level}</Text>
+        <Text style={levelStyles.icon}>{icon}</Text>
+      </View>
+      <Text style={levelStyles.label}>{label}</Text>
+      <View style={levelStyles.progressTrack}>
+        <View style={[levelStyles.progressFill, { width: `${progressPct}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={levelStyles.exp}>
+        {info.exp} {info.nextThreshold ? `/ ${info.nextThreshold}` : "(أعلى مستوى)"}
+      </Text>
+    </View>
+  );
+}
+
+const levelStyles = StyleSheet.create({
+  card: { flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.md },
+  headerRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
+  levelValue: { fontWeight: "800", fontSize: 16 },
+  icon: { fontSize: 16 },
+  label: { color: colors.textSecondary, fontSize: 11, textAlign: "right", marginTop: 2, marginBottom: spacing.sm },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceMuted, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 3 },
+  exp: { color: colors.textMuted, fontSize: 10, textAlign: "right", marginTop: spacing.xs },
+});
+
 const rowStyles = StyleSheet.create({
   row: {
     flexDirection: "row-reverse",
@@ -302,6 +404,18 @@ const styles = StyleSheet.create({
   header: { paddingTop: 56, paddingBottom: spacing.xxl, alignItems: "center" },
   backButton: { position: "absolute", top: 52, left: spacing.lg, padding: spacing.xs },
   backButtonText: { color: "#fff", fontSize: 32, fontWeight: "300", lineHeight: 32 },
+  editIconButton: {
+    position: "absolute",
+    top: 52,
+    right: spacing.lg,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editIconText: { fontSize: 16 },
   avatarRing: {
     padding: 4,
     borderRadius: 999,
@@ -309,6 +423,20 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.6)",
     marginBottom: spacing.md,
   },
+  cameraBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  cameraBadgeText: { fontSize: 12 },
   name: { ...typography.heading, color: "#fff", fontSize: 20 },
   username: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 2 },
   idRow: {
@@ -336,7 +464,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: radii.lg,
     padding: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     justifyContent: "space-around",
     alignItems: "center",
   },
@@ -344,6 +472,7 @@ const styles = StyleSheet.create({
   walletDivider: { width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.08)" },
   walletValue: { color: colors.gold, fontSize: 20, fontWeight: "800" },
   walletLabel: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  levelsRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.xl },
   agencyCard: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -380,6 +509,19 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   inputMultiline: { minHeight: 70, textAlignVertical: "top" },
+  genderRow: { flexDirection: "row-reverse", gap: spacing.sm },
+  genderOption: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  genderOptionActive: { backgroundColor: colors.primary, borderColor: colors.primaryLight },
+  genderOptionText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
+  genderOptionTextActive: { color: "#fff" },
   actionsRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
   button: { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
   buttonSecondary: { backgroundColor: colors.surfaceMuted, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },

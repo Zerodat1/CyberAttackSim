@@ -8,6 +8,16 @@ export interface AuthUser {
   avatarUrl?: string | null;
 }
 
+export type Gender = "MALE" | "FEMALE";
+
+export interface LevelInfo {
+  level: number;
+  exp: number;
+  currentThreshold: number;
+  nextThreshold: number | null;
+  progress: number;
+}
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -17,6 +27,7 @@ export interface UserProfile {
   avatarUrl: string | null;
   bio: string | null;
   country: string | null;
+  gender: Gender | null;
   globalRole: string;
   twoFactorEnabled: boolean;
   createdAt: string;
@@ -26,6 +37,10 @@ export interface UserProfile {
   activeEntrance: { emoji: string; colorHex: string } | null;
   activeBubble: { emoji: string; colorHex: string } | null;
   activeMicEffect: { emoji: string; colorHex: string } | null;
+  levels: {
+    wealth: LevelInfo;
+    charm: LevelInfo;
+  };
 }
 
 export interface RechargeWallet {
