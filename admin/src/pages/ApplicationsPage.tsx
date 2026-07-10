@@ -78,6 +78,7 @@ export function ApplicationsPage() {
               <TableRow>
                 <TableCell>المتقدم</TableCell>
                 <TableCell>اسم الوكالة</TableCell>
+                <TableCell>رقم الهاتف</TableCell>
                 <TableCell>الدولة/المدينة</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell align="left">إجراء</TableCell>
@@ -97,6 +98,9 @@ export function ApplicationsPage() {
                     </Stack>
                   </TableCell>
                   <TableCell>{app.agencyName}</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }} dir="ltr" align="right">
+                    {app.phone}
+                  </TableCell>
                   <TableCell sx={{ color: "text.secondary" }}>
                     {app.country} / {app.city}
                   </TableCell>
