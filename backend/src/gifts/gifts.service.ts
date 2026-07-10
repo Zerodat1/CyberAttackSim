@@ -52,88 +52,92 @@ export class GiftsService {
   }
 
   async sendGift(senderId: string, dto: SendGiftDto) {
-    if (senderId === dto.recipientId) {
-      throw new BadRequestException("Cannot send a gift to yourself");
-    }
+    const recipientIds = Array.from(new Set(dto.recipientIds));
 
     const gift = await this.getGiftOrThrow(dto.giftId);
     if (!gift.isActive) {
       throw new BadRequestException("This gift is no longer available");
     }
 
-    const recipient = await this.prisma.user.findUnique({ where: { id: dto.recipientId } });
-    if (!recipient) {
-      throw new NotFoundException("Recipient not found");
+    const recipientsCount = await this.prisma.user.count({ where: { id: { in: recipientIds } } });
+    if (recipientsCount !== recipientIds.length) {
+      throw new NotFoundException("One or more recipients not found");
     }
 
     const quantity = dto.quantity ?? 1;
-    const totalGoldCost = round2(Number(gift.price) * quantity);
-    const diamondsAwarded = round2(totalGoldCost * (Number(gift.diamondShareRate) / 100));
+    const totalGoldCostEach = round2(Number(gift.price) * quantity);
+    const diamondsAwardedEach = round2(totalGoldCostEach * (Number(gift.diamondShareRate) / 100));
+    const totalGoldCost = round2(totalGoldCostEach * recipientIds.length);
+    const odds = gift.type === "LUCKY" ? (gift.luckyOdds as unknown as WeightedOutcome[]) : null;
 
-    let luckyMultiplier: number | null = null;
-    let luckyPayoutGold: number | null = null;
-
-    if (gift.type === "LUCKY") {
-      const odds = gift.luckyOdds as unknown as WeightedOutcome[];
-      luckyMultiplier = pickWeightedMultiplier(odds);
-      luckyPayoutGold = round2(totalGoldCost * luckyMultiplier);
-    }
-
-    const giftSend = await this.prisma.$transaction(async (tx) => {
+    const giftSends = await this.prisma.$transaction(async (tx) => {
       await this.wallet.debitGold(senderId, totalGoldCost, tx);
 
-      if (luckyPayoutGold !== null) {
-        await this.wallet.creditGold(senderId, luckyPayoutGold, tx);
+      const created = [];
+      for (const recipientId of recipientIds) {
+        let luckyMultiplier: number | null = null;
+        let luckyPayoutGold: number | null = null;
+
+        if (odds) {
+          luckyMultiplier = pickWeightedMultiplier(odds);
+          luckyPayoutGold = round2(totalGoldCostEach * luckyMultiplier);
+          await this.wallet.creditGold(senderId, luckyPayoutGold, tx);
+        }
+
+        await this.wallet.creditDiamond(recipientId, diamondsAwardedEach, tx);
+
+        const giftSend = await tx.giftSend.create({
+          data: {
+            senderId,
+            recipientId,
+            giftId: gift.id,
+            roomId: dto.roomId,
+            quantity,
+            totalGoldCost: totalGoldCostEach,
+            diamondsAwarded: diamondsAwardedEach,
+            isLucky: gift.type === "LUCKY",
+            luckyMultiplier,
+            luckyPayoutGold,
+          },
+          include: {
+            sender: { select: { id: true, username: true, avatarUrl: true } },
+            recipient: { select: { id: true, username: true, avatarUrl: true } },
+            gift: true,
+          },
+        });
+
+        await this.hostEarnings.recordGiftEarnings(recipientId, diamondsAwardedEach, giftSend.id, tx, gift.type);
+
+        created.push(giftSend);
       }
-
-      await this.wallet.creditDiamond(dto.recipientId, diamondsAwarded, tx);
-
-      const created = await tx.giftSend.create({
-        data: {
-          senderId,
-          recipientId: dto.recipientId,
-          giftId: gift.id,
-          roomId: dto.roomId,
-          quantity,
-          totalGoldCost,
-          diamondsAwarded,
-          isLucky: gift.type === "LUCKY",
-          luckyMultiplier,
-          luckyPayoutGold,
-        },
-        include: {
-          sender: { select: { id: true, username: true, avatarUrl: true } },
-          recipient: { select: { id: true, username: true, avatarUrl: true } },
-          gift: true,
-        },
-      });
-
-      await this.hostEarnings.recordGiftEarnings(dto.recipientId, diamondsAwarded, created.id, tx, gift.type);
 
       return created;
     });
 
-    this.events.emit(GIFT_SENT_EVENT, giftSend);
+    for (const giftSend of giftSends) {
+      this.events.emit(GIFT_SENT_EVENT, giftSend);
 
-    await this.notifications.send(
-      dto.recipientId,
-      "GIFT_RECEIVED",
-      "لقد استلمت هدية",
-      `أرسل لك ${giftSend.sender.username} هدية "${gift.name}" وحصلت على ${diamondsAwarded} ألماسة.`,
-      { giftSendId: giftSend.id },
-    );
-
-    if (luckyMultiplier !== null && luckyPayoutGold !== null && luckyPayoutGold > totalGoldCost) {
       await this.notifications.send(
-        senderId,
-        "GIFT_LUCKY_WIN",
-        "هدية محظوظة!",
-        `ربحت ${luckyPayoutGold} ذهب من إرسال هدية "${gift.name}" (مضاعف x${luckyMultiplier}).`,
+        giftSend.recipientId,
+        "GIFT_RECEIVED",
+        "لقد استلمت هدية",
+        `أرسل لك ${giftSend.sender.username} هدية "${gift.name}" وحصلت على ${diamondsAwardedEach} ألماسة.`,
         { giftSendId: giftSend.id },
       );
+
+      const luckyPayoutGold = giftSend.luckyPayoutGold !== null ? Number(giftSend.luckyPayoutGold) : null;
+      if (luckyPayoutGold !== null && giftSend.luckyMultiplier !== null && luckyPayoutGold > totalGoldCostEach) {
+        await this.notifications.send(
+          senderId,
+          "GIFT_LUCKY_WIN",
+          "هدية محظوظة!",
+          `ربحت ${luckyPayoutGold} ذهب من إرسال هدية "${gift.name}" (مضاعف x${giftSend.luckyMultiplier}).`,
+          { giftSendId: giftSend.id },
+        );
+      }
     }
 
-    return giftSend;
+    return giftSends;
   }
 
   async listHistory(userId: string, direction?: "sent" | "received") {

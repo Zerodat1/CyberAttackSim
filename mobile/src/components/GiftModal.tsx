@@ -27,7 +27,7 @@ const TYPE_FALLBACK_ICON: Record<GiftType, string> = {
 export function GiftModal({ visible, roomId, members, currentUserId, onClose }: Props) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<GiftType>("STATIC");
-  const [recipientId, setRecipientId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [giftId, setGiftId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -42,13 +42,13 @@ export function GiftModal({ visible, roomId, members, currentUserId, onClose }: 
   const sendMutation = useMutation({
     mutationFn: async () =>
       apiClient.post("/gifts/send", {
-        recipientId,
+        recipientIds: selectedIds,
         giftId,
         quantity,
         roomId,
       }),
     onSuccess: () => {
-      setSuccess("تم إرسال الهدية بنجاح");
+      setSuccess(selectedIds.length > 1 ? `تم إرسال الهدية إلى ${selectedIds.length} مستخدمين` : "تم إرسال الهدية بنجاح");
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
     },
@@ -58,13 +58,21 @@ export function GiftModal({ visible, roomId, members, currentUserId, onClose }: 
     },
   });
 
-  const otherMembers = members.filter((m) => m.userId !== currentUserId);
   const visibleGifts = useMemo(() => gifts?.filter((g) => g.type === activeTab) ?? [], [gifts, activeTab]);
   const selectedGift = gifts?.find((g) => g.id === giftId);
+  const allSelected = members.length > 0 && selectedIds.length === members.length;
 
   function selectTab(tab: GiftType) {
     setActiveTab(tab);
     setGiftId(null);
+  }
+
+  function toggleRecipient(userId: string) {
+    setSelectedIds((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(allSelected ? [] : members.map((m) => m.userId));
   }
 
   return (
@@ -80,20 +88,34 @@ export function GiftModal({ visible, roomId, members, currentUserId, onClose }: 
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipientRow}>
-            {otherMembers.map((member) => (
-              <TouchableOpacity
-                key={member.userId}
-                style={styles.recipientChip}
-                onPress={() => setRecipientId(member.userId)}
-              >
-                <View style={[styles.recipientAvatarRing, recipientId === member.userId && styles.recipientAvatarRingActive]}>
-                  <Avatar name={member.user.username} imageUrl={member.user.avatarUrl} size={44} />
+            <TouchableOpacity style={styles.recipientChip} onPress={toggleSelectAll}>
+              <View style={[styles.recipientAvatarRing, allSelected && styles.recipientAvatarRingActive]}>
+                <View style={styles.allAvatar}>
+                  <Text style={styles.allAvatarText}>الكل</Text>
                 </View>
-                <Text style={styles.recipientName} numberOfLines={1}>
-                  {member.user.username}
-                </Text>
-              </TouchableOpacity>
-            ))}
+              </View>
+              <Text style={styles.recipientName} numberOfLines={1}>
+                الكل
+              </Text>
+            </TouchableOpacity>
+            {members.map((member) => {
+              const isSelf = member.userId === currentUserId;
+              const isSelected = selectedIds.includes(member.userId);
+              return (
+                <TouchableOpacity
+                  key={member.userId}
+                  style={styles.recipientChip}
+                  onPress={() => toggleRecipient(member.userId)}
+                >
+                  <View style={[styles.recipientAvatarRing, isSelected && styles.recipientAvatarRingActive]}>
+                    <Avatar name={member.user.username} imageUrl={member.user.avatarUrl} size={44} />
+                  </View>
+                  <Text style={styles.recipientName} numberOfLines={1}>
+                    {isSelf ? "أنت (دعم نفسك)" : member.user.username}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           <View style={styles.tabsRow}>
@@ -146,15 +168,15 @@ export function GiftModal({ visible, roomId, members, currentUserId, onClose }: 
             </View>
 
             <TouchableOpacity
-              style={[styles.sendButton, (!recipientId || !giftId) && styles.sendButtonDisabled]}
-              disabled={!recipientId || !giftId || sendMutation.isPending}
+              style={[styles.sendButton, (selectedIds.length === 0 || !giftId) && styles.sendButtonDisabled]}
+              disabled={selectedIds.length === 0 || !giftId || sendMutation.isPending}
               onPress={() => sendMutation.mutate()}
             >
               {sendMutation.isPending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.sendButtonText}>
-                  إهداء {selectedGift ? `(${Number(selectedGift.price) * quantity} 🪙)` : ""}
+                  إهداء {selectedGift ? `(${Number(selectedGift.price) * quantity * Math.max(1, selectedIds.length)} 🪙)` : ""}
                 </Text>
               )}
             </TouchableOpacity>
@@ -193,6 +215,15 @@ const styles = StyleSheet.create({
   },
   recipientAvatarRingActive: { borderColor: colors.giftPink },
   recipientName: { color: colors.textSecondary, fontSize: 10, marginTop: 4, maxWidth: 56, textAlign: "center" },
+  allAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  allAvatarText: { color: colors.textPrimary, fontSize: 11, fontWeight: "800" },
   tabsRow: {
     flexDirection: "row-reverse",
     paddingHorizontal: spacing.xl,

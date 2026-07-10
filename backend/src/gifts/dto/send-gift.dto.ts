@@ -1,10 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class SendGiftDto {
-  @ApiProperty()
-  @IsString()
-  recipientId: string;
+  @ApiProperty({
+    type: [String],
+    description: "User IDs to send the gift to. Include your own ID to support yourself.",
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  @ArrayUnique()
+  @IsString({ each: true })
+  recipientIds: string[];
 
   @ApiProperty()
   @IsString()
