@@ -26,10 +26,10 @@ import { EmptyState } from "@/components/EmptyState";
 
 const DEFAULT_LUCKY_ODDS = JSON.stringify(
   [
-    { multiplier: 0, weight: 55 },
-    { multiplier: 1, weight: 35 },
-    { multiplier: 5, weight: 8 },
-    { multiplier: 50, weight: 2 },
+    { multiplier: 0, weight: 50 },
+    { multiplier: 1, weight: 30 },
+    { multiplier: 5, weight: 15 },
+    { multiplier: 50, weight: 5 },
   ],
   null,
   2,

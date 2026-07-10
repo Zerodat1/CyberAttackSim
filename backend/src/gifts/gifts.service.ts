@@ -108,7 +108,7 @@ export class GiftsService {
         },
       });
 
-      await this.hostEarnings.recordGiftEarnings(dto.recipientId, diamondsAwarded, created.id, tx);
+      await this.hostEarnings.recordGiftEarnings(dto.recipientId, diamondsAwarded, created.id, tx, gift.type);
 
       return created;
     });

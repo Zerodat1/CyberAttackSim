@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { GiftType, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { HostEconomySettingsService } from "./host-economy-settings.service";
 import { HostTargetTiersService } from "./host-target-tiers.service";
 import { currentMonthKey, startOfDay, startOfMonth } from "./utils/month-key";
+
+const LUCKY_GIFT_TARGET_SHARE = 0.1;
 
 @Injectable()
 export class HostEarningsService {
@@ -18,6 +20,7 @@ export class HostEarningsService {
     diamondsAwarded: number,
     giftSendId: string,
     tx: Prisma.TransactionClient,
+    giftType: GiftType = GiftType.STATIC,
   ) {
     const member = await tx.hostAgencyMember.findUnique({ where: { userId: recipientId } });
     if (!member) {
@@ -25,22 +28,23 @@ export class HostEarningsService {
     }
 
     const monthKey = currentMonthKey();
+    const targetDiamonds = giftType === GiftType.LUCKY ? round2(diamondsAwarded * LUCKY_GIFT_TARGET_SHARE) : diamondsAwarded;
 
     const memberMonthlyDiamonds =
-      member.monthKey === monthKey ? Number(member.monthlyDiamonds) + diamondsAwarded : diamondsAwarded;
+      member.monthKey === monthKey ? Number(member.monthlyDiamonds) + targetDiamonds : targetDiamonds;
 
     await tx.hostAgencyMember.update({
       where: { userId: recipientId },
       data: {
         monthlyDiamonds: memberMonthlyDiamonds,
-        lifetimeDiamonds: { increment: diamondsAwarded },
+        lifetimeDiamonds: { increment: targetDiamonds },
         monthKey,
       },
     });
 
     const agency = await tx.hostAgency.findUniqueOrThrow({ where: { id: member.agencyId } });
     const agencyMonthlyDiamonds =
-      agency.monthKey === monthKey ? Number(agency.monthlyDiamonds) + diamondsAwarded : diamondsAwarded;
+      agency.monthKey === monthKey ? Number(agency.monthlyDiamonds) + targetDiamonds : targetDiamonds;
 
     const economySettings = await this.settings.getSettings();
     const effectiveRate = this.effectiveCommissionRate(agency, agencyMonthlyDiamonds, economySettings);
