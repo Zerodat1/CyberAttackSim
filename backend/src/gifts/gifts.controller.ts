@@ -1,6 +1,5 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../common/types/authenticated-user";
@@ -20,8 +19,8 @@ export class GiftsController {
   }
 
   @Post("send")
-  send(@CurrentUser() user: AuthenticatedUser, @Body() dto: SendGiftDto, @Req() req: Request) {
-    return this.giftsService.sendGift(user.id, dto, { ipAddress: req.ip });
+  send(@CurrentUser() user: AuthenticatedUser, @Body() dto: SendGiftDto) {
+    return this.giftsService.sendGift(user.id, dto);
   }
 
   @Get("history")

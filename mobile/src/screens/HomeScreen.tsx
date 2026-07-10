@@ -88,7 +88,7 @@ export function HomeScreen({ navigation }: Props) {
           {application && application.status !== "APPROVED" && (
             <>
               <Text style={styles.cardTitle}>حالة طلب الوكالة: {STATUS_LABEL[application.status]}</Text>
-              {application.reviewNotes && <Text style={styles.notes}>{application.reviewNotes}</Text>}
+              {Boolean(application.reviewNotes) && <Text style={styles.notes}>{application.reviewNotes}</Text>}
               {application.status === "CHANGES_REQUESTED" && (
                 <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("ApplyAgency")}>
                   <Text style={styles.buttonText}>تعديل الطلب وإعادة الإرسال</Text>

@@ -154,7 +154,7 @@ export function HostAgencyDetailScreen({ route, navigation }: Props) {
     <ScrollView style={styles.root} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
       <LinearGradient colors={[colors.primary, "#8a3ffb"]} style={styles.header}>
         <Text style={styles.agencyName}>{agency.name}</Text>
-        {agency.description && <Text style={styles.agencyDescription}>{agency.description}</Text>}
+        {Boolean(agency.description) && <Text style={styles.agencyDescription}>{agency.description}</Text>}
         <View style={styles.headerMetaRow}>
           <Text style={styles.headerMeta}>👥 {agency._count.members} عضو</Text>
           <Text style={styles.headerMeta}>المالك: {agency.owner.fullName}</Text>

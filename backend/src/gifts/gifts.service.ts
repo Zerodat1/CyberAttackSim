@@ -51,7 +51,7 @@ export class GiftsService {
     return this.prisma.gift.update({ where: { id }, data: dto });
   }
 
-  async sendGift(senderId: string, dto: SendGiftDto, ctx: { ipAddress?: string } = {}) {
+  async sendGift(senderId: string, dto: SendGiftDto) {
     if (senderId === dto.recipientId) {
       throw new BadRequestException("Cannot send a gift to yourself");
     }
