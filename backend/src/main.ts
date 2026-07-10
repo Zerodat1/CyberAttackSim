@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
+import { json, urlencoded } from "express";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 
@@ -10,6 +11,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
+  app.use(json({ limit: "6mb" }));
+  app.use(urlencoded({ extended: true, limit: "6mb" }));
   app.enableCors();
   app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(

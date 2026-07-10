@@ -21,6 +21,7 @@ function requestContext(req: Request): RequestContext {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60 } })
   @Post("register")
   register(@Body() dto: RegisterDto, @Req() req: Request) {
     return this.authService.register(dto, requestContext(req));
