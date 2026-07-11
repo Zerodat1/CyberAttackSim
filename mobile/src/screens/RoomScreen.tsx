@@ -21,6 +21,8 @@ import { Avatar } from "@/components/Avatar";
 import { GiftModal } from "@/components/GiftModal";
 import { GamesHubModal } from "@/components/GamesHubModal";
 import { RoomSettingsModal } from "@/components/RoomSettingsModal";
+import { SeatReactionModal } from "@/components/SeatReactionModal";
+import { SeatReactionBubble } from "@/components/SeatReactionBubble";
 import { colorForName, colors, hexToRgba, radii, spacing } from "@/theme";
 import type {
   GameRound,
@@ -80,6 +82,8 @@ export function RoomScreen({ route, navigation }: Props) {
   const [gameModalVisible, setGameModalVisible] = useState(false);
   const [membersModalVisible, setMembersModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [reactionModalVisible, setReactionModalVisible] = useState(false);
+  const [activeReactions, setActiveReactions] = useState<Record<number, { id: string; key: number }>>({});
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [deafened, setDeafened] = useState(false);
   const deafenedRef = useRef(false);
@@ -159,6 +163,9 @@ export function RoomScreen({ route, navigation }: Props) {
           [{ id: `entrance-${payload.userId}-${Date.now()}`, text: payload.text, kind: "entrance" as const, color: payload.colorHex }, ...prev].slice(0, 20),
         );
       });
+      s.on("room:seat_reaction", (payload: { seatNumber: number; reactionId: string }) => {
+        setActiveReactions((prev) => ({ ...prev, [payload.seatNumber]: { id: payload.reactionId, key: Date.now() } }));
+      });
     });
     return () => {
       socket?.emit("room:leave", { roomId });
@@ -204,8 +211,22 @@ export function RoomScreen({ route, navigation }: Props) {
     const isOwnerSeat = isVip && seat.seatNumber === 1 && !!seat.occupant;
     const frame = seat.occupant ? resolveFrame(seat.occupant, vipLevels) : null;
     const micGlow = seat.occupant?.activeMicEffect?.colorHex;
+    const activeReaction = activeReactions[seat.seatNumber];
     return (
       <View key={seat.id} style={styles.seatWrapper}>
+        {activeReaction && (
+          <SeatReactionBubble
+            key={activeReaction.key}
+            reactionId={activeReaction.id}
+            onDone={() =>
+              setActiveReactions((prev) => {
+                const next = { ...prev };
+                delete next[seat.seatNumber];
+                return next;
+              })
+            }
+          />
+        )}
         {isOwnerSeat && <Text style={styles.crown}>👑</Text>}
         <TouchableOpacity
           disabled={!joined || !!seat.occupantId || seat.isLocked}
@@ -367,6 +388,11 @@ export function RoomScreen({ route, navigation }: Props) {
             <TouchableOpacity style={styles.bottomIconButton} onPress={() => setGameModalVisible(true)}>
               <Text style={styles.bottomIconText}>🎲</Text>
             </TouchableOpacity>
+            {mySeat && (
+              <TouchableOpacity style={styles.bottomIconButton} onPress={() => setReactionModalVisible(true)}>
+                <Text style={styles.bottomIconText}>😀</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.bottomIconButton} onPress={() => setMembersModalVisible(true)}>
               <Text style={styles.bottomIconText}>👥</Text>
             </TouchableOpacity>
@@ -429,6 +455,11 @@ export function RoomScreen({ route, navigation }: Props) {
         onClose={() => setGiftModalVisible(false)}
       />
       <GamesHubModal visible={gameModalVisible} roomId={roomId} onClose={() => setGameModalVisible(false)} />
+      <SeatReactionModal
+        visible={reactionModalVisible}
+        onClose={() => setReactionModalVisible(false)}
+        onSelect={(reactionId) => socketRef.current?.emit("room:seat_react", { roomId, reactionId })}
+      />
       <RoomSettingsModal
         visible={settingsModalVisible}
         room={room}
@@ -521,7 +552,7 @@ const styles = StyleSheet.create({
     borderRadius: 110,
   },
   seatsRow: { flexDirection: "row-reverse", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
-  seatWrapper: { width: "23%", alignItems: "center", marginBottom: spacing.md },
+  seatWrapper: { width: "23%", alignItems: "center", marginBottom: spacing.md, position: "relative" },
   crown: { fontSize: 16, marginBottom: -6, zIndex: 1 },
   seatCircle: {
     width: 64,

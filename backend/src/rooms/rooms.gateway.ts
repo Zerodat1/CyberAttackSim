@@ -14,6 +14,7 @@ import { GameRound, Prisma, RoomEvent } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthenticatedUser } from "../common/types/authenticated-user";
 import { authenticateSocket } from "../realtime/socket-auth.util";
+import { SEAT_REACTION_IDS } from "./constants/seat-reactions";
 
 interface AuthenticatedSocket extends Socket {
   data: { user: AuthenticatedUser };
@@ -68,6 +69,30 @@ export class RoomsGateway implements OnGatewayInit {
   @SubscribeMessage("room:leave")
   onLeaveRoom(@ConnectedSocket() client: Socket, @MessageBody() data: { roomId: string }) {
     client.leave(roomChannel(data.roomId));
+  }
+
+  @SubscribeMessage("room:seat_react")
+  async onSeatReact(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { roomId: string; reactionId: string },
+  ) {
+    if (!SEAT_REACTION_IDS.includes(data.reactionId)) {
+      return;
+    }
+
+    const seat = await this.prisma.roomSeat.findFirst({
+      where: { roomId: data.roomId, occupantId: client.data.user.id },
+    });
+    if (!seat) {
+      return;
+    }
+
+    this.server.to(roomChannel(data.roomId)).emit("room:seat_reaction", {
+      roomId: data.roomId,
+      userId: client.data.user.id,
+      seatNumber: seat.seatNumber,
+      reactionId: data.reactionId,
+    });
   }
 
   @OnEvent("room.event")
