@@ -23,11 +23,13 @@ import { GamesHubModal } from "@/components/GamesHubModal";
 import { RoomSettingsModal } from "@/components/RoomSettingsModal";
 import { SeatReactionModal } from "@/components/SeatReactionModal";
 import { SeatReactionBubble } from "@/components/SeatReactionBubble";
+import { RoomChatModal } from "@/components/RoomChatModal";
 import { colorForName, colors, hexToRgba, radii, spacing } from "@/theme";
 import type {
   GameRound,
   GameType,
   GiftSend,
+  RoomChatMessage,
   RoomDetail,
   RoomMemberRole,
   RoomSeat,
@@ -84,6 +86,8 @@ export function RoomScreen({ route, navigation }: Props) {
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [reactionModalVisible, setReactionModalVisible] = useState(false);
   const [activeReactions, setActiveReactions] = useState<Record<number, { id: string; key: number }>>({});
+  const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [chatMessages, setChatMessages] = useState<RoomChatMessage[]>([]);
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [deafened, setDeafened] = useState(false);
   const deafenedRef = useRef(false);
@@ -107,6 +111,24 @@ export function RoomScreen({ route, navigation }: Props) {
     queryKey: ["vip-levels"],
     queryFn: async () => (await apiClient.get<VipLevel[]>("/vip/levels")).data,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: chatHistory } = useQuery({
+    queryKey: ["room-chat", roomId],
+    queryFn: async () => (await apiClient.get<RoomChatMessage[]>(`/rooms/${roomId}/chat`)).data,
+    enabled: joined,
+  });
+
+  useEffect(() => {
+    if (chatHistory) setChatMessages(chatHistory);
+  }, [chatHistory]);
+
+  const sendChatMutation = useMutation({
+    mutationFn: async (text: string) => apiClient.post(`/rooms/${roomId}/chat`, { text }),
+  });
+
+  const deleteChatMutation = useMutation({
+    mutationFn: async (messageId: string) => apiClient.delete(`/rooms/${roomId}/chat/${messageId}`),
   });
 
   const joinMutation = useMutation({
@@ -166,6 +188,12 @@ export function RoomScreen({ route, navigation }: Props) {
       s.on("room:seat_reaction", (payload: { seatNumber: number; reactionId: string }) => {
         setActiveReactions((prev) => ({ ...prev, [payload.seatNumber]: { id: payload.reactionId, key: Date.now() } }));
       });
+      s.on("room:chat", (message: RoomChatMessage) => {
+        setChatMessages((prev) => [...prev, message].slice(-200));
+      });
+      s.on("room:chat_deleted", (payload: { messageId: string }) => {
+        setChatMessages((prev) => prev.filter((m) => m.id !== payload.messageId));
+      });
     });
     return () => {
       socket?.emit("room:leave", { roomId });
@@ -201,6 +229,7 @@ export function RoomScreen({ route, navigation }: Props) {
   const mySeat = room.seats.find((s) => s.occupantId === user?.id);
   const myMembership = room.members.find((m) => m.userId === user?.id);
   const canManageRoom = myMembership ? ROOM_ROLE_RANK[myMembership.role] >= ROOM_ROLE_RANK.ADMIN : false;
+  const canModerateChat = myMembership ? ROOM_ROLE_RANK[myMembership.role] >= ROOM_ROLE_RANK.MODERATOR : false;
   const sortedSeats = [...room.seats].sort((a, b) => a.seatNumber - b.seatNumber);
   const vipSeats = sortedSeats.slice(0, 4);
   const restSeats = sortedSeats.slice(4);
@@ -396,6 +425,9 @@ export function RoomScreen({ route, navigation }: Props) {
             <TouchableOpacity style={styles.bottomIconButton} onPress={() => setMembersModalVisible(true)}>
               <Text style={styles.bottomIconText}>👥</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomIconButton} onPress={() => setChatModalVisible(true)}>
+              <Text style={styles.bottomIconText}>💬</Text>
+            </TouchableOpacity>
             {mySeat && (
               <TouchableOpacity style={styles.leaveSeatButton} onPress={() => leaveSeatMutation.mutate()}>
                 <Text style={styles.joinButtonText}>مغادرة المايك</Text>
@@ -459,6 +491,15 @@ export function RoomScreen({ route, navigation }: Props) {
         visible={reactionModalVisible}
         onClose={() => setReactionModalVisible(false)}
         onSelect={(reactionId) => socketRef.current?.emit("room:seat_react", { roomId, reactionId })}
+      />
+      <RoomChatModal
+        visible={chatModalVisible}
+        onClose={() => setChatModalVisible(false)}
+        messages={chatMessages}
+        currentUserId={user?.id}
+        canModerate={canModerateChat}
+        onSend={(text) => sendChatMutation.mutate(text)}
+        onDelete={(messageId) => deleteChatMutation.mutate(messageId)}
       />
       <RoomSettingsModal
         visible={settingsModalVisible}

@@ -190,6 +190,7 @@ model User {
   roomMemberships      RoomMember[]
   roomSeats            RoomSeat[]
   roomEventsActed      RoomEvent[]           @relation("RoomEventActor")
+  roomChatMessages     RoomChatMessage[]
   conversationsAsA     Conversation[]        @relation("ConversationUserA")
   conversationsAsB     Conversation[]        @relation("ConversationUserB")
   conversationSettings ConversationSetting[]
@@ -511,13 +512,26 @@ model Room {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  members RoomMember[]
-  seats   RoomSeat[]
-  events  RoomEvent[]
-  gifts   GiftSend[]
-  games   GameRound[]
+  members      RoomMember[]
+  seats        RoomSeat[]
+  events       RoomEvent[]
+  gifts        GiftSend[]
+  games        GameRound[]
+  chatMessages RoomChatMessage[]
 
   @@index([isActive])
+}
+
+model RoomChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([roomId, createdAt])
 }
 
 model RoomMember {

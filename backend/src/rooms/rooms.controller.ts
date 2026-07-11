@@ -21,6 +21,7 @@ import { UpdateRoomDto } from "./dto/update-room.dto";
 import { JoinRoomDto } from "./dto/join-room.dto";
 import { ChangeMemberRoleDto } from "./dto/change-member-role.dto";
 import { MuteSeatDto, LockSeatDto } from "./dto/toggle.dto";
+import { SendRoomChatMessageDto } from "./dto/send-room-chat-message.dto";
 
 type Membership = RoomMemberRequest["roomMembership"];
 
@@ -152,5 +153,32 @@ export class RoomsController {
     @Body() dto: ChangeMemberRoleDto,
   ) {
     return this.roomsService.changeMemberRole(id, user.id, membership.role, targetUserId, dto.role);
+  }
+
+  @UseGuards(RoomMemberGuard)
+  @Post(":id/chat")
+  sendChatMessage(
+    @Param("id") id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SendRoomChatMessageDto,
+  ) {
+    return this.roomsService.sendChatMessage(id, user.id, dto.text);
+  }
+
+  @UseGuards(RoomMemberGuard)
+  @Get(":id/chat")
+  listChatMessages(@Param("id") id: string) {
+    return this.roomsService.listChatMessages(id);
+  }
+
+  @UseGuards(RoomMemberGuard)
+  @Delete(":id/chat/:messageId")
+  deleteChatMessage(
+    @Param("id") id: string,
+    @Param("messageId") messageId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: Membership,
+  ) {
+    return this.roomsService.deleteChatMessage(id, user.id, membership.role, messageId);
   }
 }

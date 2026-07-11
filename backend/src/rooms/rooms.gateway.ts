@@ -24,6 +24,10 @@ type GiftSendWithRelations = Prisma.GiftSendGetPayload<{
   include: { sender: true; recipient: true; gift: true };
 }>;
 
+type RoomChatMessageWithSender = Prisma.RoomChatMessageGetPayload<{
+  include: { sender: { select: { id: true; username: true; fullName: true; avatarUrl: true } } };
+}>;
+
 function roomChannel(roomId: string): string {
   return `room:${roomId}`;
 }
@@ -117,5 +121,15 @@ export class RoomsGateway implements OnGatewayInit {
   @OnEvent("room.entrance")
   broadcastEntrance(payload: { roomId: string; userId: string; text: string; colorHex: string; emoji: string }) {
     this.server.to(roomChannel(payload.roomId)).emit("room:entrance", payload);
+  }
+
+  @OnEvent("room.chat")
+  broadcastChatMessage(message: RoomChatMessageWithSender) {
+    this.server.to(roomChannel(message.roomId)).emit("room:chat", message);
+  }
+
+  @OnEvent("room.chat.deleted")
+  broadcastChatDeleted(payload: { roomId: string; messageId: string }) {
+    this.server.to(roomChannel(payload.roomId)).emit("room:chat_deleted", payload);
   }
 }

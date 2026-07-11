@@ -20,6 +20,15 @@ export interface RoomEventPayload {
 
 const ROOM_EVENT = "room.event";
 const ROOM_ENTRANCE_EVENT = "room.entrance";
+const ROOM_CHAT_EVENT = "room.chat";
+const ROOM_CHAT_DELETED_EVENT = "room.chat.deleted";
+
+const chatSenderSelect = {
+  id: true,
+  username: true,
+  fullName: true,
+  avatarUrl: true,
+} as const;
 
 const userWithCosmeticsSelect = {
   id: true,
@@ -451,5 +460,36 @@ export class RoomsService {
       throw new NotFoundException("Target user is not a member of this room");
     }
     return membership;
+  }
+
+  async sendChatMessage(roomId: string, senderId: string, text: string) {
+    const message = await this.prisma.roomChatMessage.create({
+      data: { roomId, senderId, text },
+      include: { sender: { select: chatSenderSelect } },
+    });
+    this.events.emit(ROOM_CHAT_EVENT, message);
+    return message;
+  }
+
+  listChatMessages(roomId: string) {
+    return this.prisma.roomChatMessage.findMany({
+      where: { roomId },
+      include: { sender: { select: chatSenderSelect } },
+      orderBy: { createdAt: "asc" },
+      take: 100,
+    });
+  }
+
+  async deleteChatMessage(roomId: string, actorId: string, actorRole: RoomMemberRole, messageId: string) {
+    const message = await this.prisma.roomChatMessage.findUnique({ where: { id: messageId } });
+    if (!message || message.roomId !== roomId) {
+      throw new NotFoundException("Message not found");
+    }
+    if (message.senderId !== actorId && !roleAtLeast(actorRole, "MODERATOR")) {
+      throw new ForbiddenException("Insufficient permissions to delete this message");
+    }
+
+    await this.prisma.roomChatMessage.delete({ where: { id: messageId } });
+    this.events.emit(ROOM_CHAT_DELETED_EVENT, { roomId, messageId });
   }
 }

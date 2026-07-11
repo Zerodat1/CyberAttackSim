@@ -126,6 +126,14 @@ export interface RoomDetail {
   members: RoomMember[];
 }
 
+export interface RoomChatMessage {
+  id: string;
+  roomId: string;
+  text: string;
+  createdAt: string;
+  sender: { id: string; username: string; fullName: string; avatarUrl: string | null };
+}
+
 export interface ConversationSummary {
   id: string;
   otherUser: { id: string; username: string; fullName: string; avatarUrl: string | null };
