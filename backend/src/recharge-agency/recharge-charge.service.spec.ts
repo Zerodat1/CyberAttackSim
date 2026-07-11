@@ -28,7 +28,7 @@ describe("RechargeChargeService", () => {
       },
       user: { findUnique: jest.fn().mockResolvedValue({ id: "target-user" }) },
       rechargeAgent: { findUniqueOrThrow: jest.fn().mockResolvedValue(agent) },
-      rechargeWallet: { update: jest.fn().mockResolvedValue({}) },
+      rechargeWallet: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       auditLog: { create: jest.fn().mockResolvedValue({}) },
     };
     prisma.$transaction = jest.fn(async (callback: (tx: unknown) => unknown) => callback(prisma));
@@ -55,8 +55,8 @@ describe("RechargeChargeService", () => {
     expect(result.agencyCommission).toBeCloseTo(2);
     expect(result.platformShare).toBeCloseTo(93);
     expect(result.status).toEqual("SUCCESS");
-    expect(prisma.rechargeWallet.update).toHaveBeenCalledWith({
-      where: { agentId: "agent-1" },
+    expect(prisma.rechargeWallet.updateMany).toHaveBeenCalledWith({
+      where: { agentId: "agent-1", balance: { gte: 100 } },
       data: { balance: { decrement: 100 } },
     });
   });

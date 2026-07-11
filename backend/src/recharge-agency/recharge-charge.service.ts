@@ -109,10 +109,13 @@ export class RechargeChargeService {
     const platformShare = round2(amount - agentCommission - agencyCommission);
 
     const transaction = await this.prisma.$transaction(async (tx) => {
-      await tx.rechargeWallet.update({
-        where: { agentId },
+      const debited = await tx.rechargeWallet.updateMany({
+        where: { agentId, balance: { gte: amount } },
         data: { balance: { decrement: amount } },
       });
+      if (debited.count === 0) {
+        throw new BadRequestException("Insufficient agent wallet balance");
+      }
 
       await this.wallet.creditGold(dto.targetUserId, goldCredited, tx);
 

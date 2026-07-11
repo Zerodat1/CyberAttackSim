@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { HostAgentWithdrawalStatus } from "@prisma/client";
+import { HostAgentWithdrawalStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { WalletService } from "../wallet/wallet.service";
@@ -85,12 +85,9 @@ export class HostAgentWithdrawalsService {
 
   async cancelRequest(hostId: string, requestId: string) {
     const request = await this.getOwnedByHostOrThrow(hostId, requestId);
-    if (request.status !== "PENDING") {
-      throw new BadRequestException("Only pending requests can be cancelled");
-    }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.hostAgentWithdrawalRequest.update({ where: { id: requestId }, data: { status: "CANCELLED" } });
+      await this.transitionOrThrow(tx, requestId, ["PENDING"], { status: "CANCELLED" });
       await this.wallet.creditDiamond(hostId, Number(request.diamondsAmount), tx);
     });
 
@@ -99,9 +96,6 @@ export class HostAgentWithdrawalsService {
 
   async confirmReceipt(hostId: string, requestId: string) {
     const request = await this.getOwnedByHostOrThrow(hostId, requestId);
-    if (request.status !== "PAID") {
-      throw new BadRequestException("This request is not awaiting your confirmation");
-    }
 
     await this.settle(request.id, request.rechargeAgentId, Number(request.diamondsAmount));
 
@@ -126,14 +120,12 @@ export class HostAgentWithdrawalsService {
 
   async acceptRequest(rechargeAgentId: string, requestId: string) {
     const request = await this.getOwnedByAgentOrThrow(rechargeAgentId, requestId);
-    if (request.status !== "PENDING") {
-      throw new BadRequestException("Only pending requests can be accepted");
-    }
 
     const now = new Date();
-    await this.prisma.hostAgentWithdrawalRequest.update({
-      where: { id: requestId },
-      data: { status: "ACCEPTED", acceptedAt: now, expiresAt: new Date(now.getTime() + ACCEPTANCE_WINDOW_MS) },
+    await this.transitionOrThrow(this.prisma, requestId, ["PENDING"], {
+      status: "ACCEPTED",
+      acceptedAt: now,
+      expiresAt: new Date(now.getTime() + ACCEPTANCE_WINDOW_MS),
     });
 
     await this.notifications.send(
@@ -149,15 +141,9 @@ export class HostAgentWithdrawalsService {
 
   async rejectRequest(rechargeAgentId: string, requestId: string, dto: RejectHostAgentWithdrawalDto) {
     const request = await this.getOwnedByAgentOrThrow(rechargeAgentId, requestId);
-    if (request.status !== "PENDING") {
-      throw new BadRequestException("Only pending requests can be rejected");
-    }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.hostAgentWithdrawalRequest.update({
-        where: { id: requestId },
-        data: { status: "REJECTED", rejectionReason: dto.reason },
-      });
+      await this.transitionOrThrow(tx, requestId, ["PENDING"], { status: "REJECTED", rejectionReason: dto.reason });
       await this.wallet.creditDiamond(request.hostId, Number(request.diamondsAmount), tx);
     });
 
@@ -174,13 +160,12 @@ export class HostAgentWithdrawalsService {
 
   async submitProof(rechargeAgentId: string, requestId: string, dto: SubmitPaymentProofDto) {
     const request = await this.getOwnedByAgentOrThrow(rechargeAgentId, requestId);
-    if (request.status !== "ACCEPTED") {
-      throw new BadRequestException("You must accept the request before submitting payment proof");
-    }
 
-    await this.prisma.hostAgentWithdrawalRequest.update({
-      where: { id: requestId },
-      data: { status: "PAID", proofUrl: dto.proofUrl, paymentReference: dto.paymentReference, paidAt: new Date() },
+    await this.transitionOrThrow(this.prisma, requestId, ["ACCEPTED"], {
+      status: "PAID",
+      proofUrl: dto.proofUrl,
+      paymentReference: dto.paymentReference,
+      paidAt: new Date(),
     });
 
     await this.notifications.send(
@@ -213,7 +198,7 @@ export class HostAgentWithdrawalsService {
           );
         } else {
           await this.prisma.$transaction(async (tx) => {
-            await tx.hostAgentWithdrawalRequest.update({ where: { id: request.id }, data: { status: "REFUNDED" } });
+            await this.transitionOrThrow(tx, request.id, ["ACCEPTED"], { status: "REFUNDED" });
             await this.wallet.creditDiamond(request.hostId, Number(request.diamondsAmount), tx);
           });
           await this.notifications.send(
@@ -232,15 +217,28 @@ export class HostAgentWithdrawalsService {
 
   private async settle(requestId: string, rechargeAgentId: string, diamondsAmount: number) {
     await this.prisma.$transaction(async (tx) => {
-      await tx.hostAgentWithdrawalRequest.update({
-        where: { id: requestId },
-        data: { status: "COMPLETED", completedAt: new Date() },
-      });
+      await this.transitionOrThrow(tx, requestId, ["PAID"], { status: "COMPLETED", completedAt: new Date() });
       await tx.rechargeAgent.update({
         where: { id: rechargeAgentId },
         data: { diamondBalance: { increment: diamondsAmount } },
       });
     });
+  }
+
+  // updateMany + count check (not a plain update) so a concurrent racer sees count 0 and throws instead of re-applying the diamond credit.
+  private async transitionOrThrow(
+    tx: Prisma.TransactionClient,
+    requestId: string,
+    fromStatuses: HostAgentWithdrawalStatus[],
+    data: Prisma.HostAgentWithdrawalRequestUpdateManyMutationInput,
+  ) {
+    const result = await tx.hostAgentWithdrawalRequest.updateMany({
+      where: { id: requestId, status: { in: fromStatuses } },
+      data,
+    });
+    if (result.count === 0) {
+      throw new BadRequestException("This request's status has already changed");
+    }
   }
 
   private async getOwnedByHostOrThrow(hostId: string, requestId: string) {

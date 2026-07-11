@@ -119,16 +119,20 @@ export class RechargeAgencyService {
       throw new BadRequestException("Insufficient balance to distribute");
     }
 
-    const [, updatedSubWallet] = await this.prisma.$transaction([
-      this.prisma.rechargeWallet.update({
-        where: { agentId: masterAgentId },
+    const updatedSubWallet = await this.prisma.$transaction(async (tx) => {
+      const debited = await tx.rechargeWallet.updateMany({
+        where: { agentId: masterAgentId, balance: { gte: dto.amount } },
         data: { balance: { decrement: dto.amount } },
-      }),
-      this.prisma.rechargeWallet.update({
+      });
+      if (debited.count === 0) {
+        throw new BadRequestException("Insufficient balance to distribute");
+      }
+
+      return tx.rechargeWallet.update({
         where: { agentId: subAgent.id },
         data: { balance: { increment: dto.amount } },
-      }),
-    ]);
+      });
+    });
 
     await this.prisma.auditLog.create({
       data: {

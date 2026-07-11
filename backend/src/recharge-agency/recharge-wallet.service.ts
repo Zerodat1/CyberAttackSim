@@ -147,8 +147,16 @@ export class RechargeWalletService {
       throw new BadRequestException("Daily withdrawal limit exceeded");
     }
 
-    const [request] = await this.prisma.$transaction([
-      this.prisma.withdrawalRequest.create({
+    const request = await this.prisma.$transaction(async (tx) => {
+      const debited = await tx.rechargeWallet.updateMany({
+        where: { agentId, balance: { gte: dto.amount } },
+        data: { balance: { decrement: dto.amount }, frozenBalance: { increment: dto.amount } },
+      });
+      if (debited.count === 0) {
+        throw new BadRequestException("Insufficient balance for withdrawal");
+      }
+
+      return tx.withdrawalRequest.create({
         data: {
           agentId,
           amount: dto.amount,
@@ -156,12 +164,8 @@ export class RechargeWalletService {
           accountNumber: dto.accountNumber,
           notes: dto.notes,
         },
-      }),
-      this.prisma.rechargeWallet.update({
-        where: { agentId },
-        data: { balance: { decrement: dto.amount }, frozenBalance: { increment: dto.amount } },
-      }),
-    ]);
+      });
+    });
 
     const agent = await this.prisma.rechargeAgent.findUniqueOrThrow({ where: { id: agentId } });
     await this.notifications.send(
