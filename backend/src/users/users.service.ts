@@ -25,27 +25,64 @@ const PUBLIC_SELECT = {
   activeMicEffect: { select: { emoji: true, colorHex: true } },
 } as const;
 
+// Deliberately excludes email/phone/twoFactorEnabled, which are only for the user's own profile view.
+const PUBLIC_PROFILE_SELECT = {
+  id: true,
+  username: true,
+  fullName: true,
+  avatarUrl: true,
+  bio: true,
+  country: true,
+  gender: true,
+  globalRole: true,
+  createdAt: true,
+  vipLevel: true,
+  vipExpiresAt: true,
+  activeFrame: { select: { emoji: true, colorHex: true } },
+  activeEntrance: { select: { emoji: true, colorHex: true } },
+  activeBubble: { select: { emoji: true, colorHex: true } },
+  activeMicEffect: { select: { emoji: true, colorHex: true } },
+} as const;
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getById(id: string) {
-    const [user, wealthSum, charmSum] = await Promise.all([
+    const [user, levels] = await Promise.all([
       this.prisma.user.findUnique({ where: { id }, select: PUBLIC_SELECT }),
-      this.prisma.giftSend.aggregate({ where: { senderId: id }, _sum: { totalGoldCost: true } }),
-      this.prisma.giftSend.aggregate({ where: { recipientId: id }, _sum: { totalGoldCost: true } }),
+      this.computeLevels(id),
     ]);
 
     if (!user) {
       throw new NotFoundException("User not found");
     }
 
+    return { ...user, levels };
+  }
+
+  async getPublicProfile(id: string) {
+    const [user, levels] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id }, select: PUBLIC_PROFILE_SELECT }),
+      this.computeLevels(id),
+    ]);
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    return { ...user, levels };
+  }
+
+  private async computeLevels(id: string) {
+    const [wealthSum, charmSum] = await Promise.all([
+      this.prisma.giftSend.aggregate({ where: { senderId: id }, _sum: { totalGoldCost: true } }),
+      this.prisma.giftSend.aggregate({ where: { recipientId: id }, _sum: { totalGoldCost: true } }),
+    ]);
+
     return {
-      ...user,
-      levels: {
-        wealth: computeLevel(Number(wealthSum._sum.totalGoldCost ?? 0)),
-        charm: computeLevel(Number(charmSum._sum.totalGoldCost ?? 0)),
-      },
+      wealth: computeLevel(Number(wealthSum._sum.totalGoldCost ?? 0)),
+      charm: computeLevel(Number(charmSum._sum.totalGoldCost ?? 0)),
     };
   }
 

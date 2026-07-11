@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -31,5 +31,10 @@ export class UsersController {
   @Get("me/sessions")
   sessions(@CurrentUser() user: AuthenticatedUser) {
     return this.usersService.getActiveSessions(user.id);
+  }
+
+  @Get(":id")
+  getPublicProfile(@Param("id") id: string) {
+    return this.usersService.getPublicProfile(id);
   }
 }

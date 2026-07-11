@@ -43,6 +43,28 @@ export interface UserProfile {
   };
 }
 
+export interface PublicUserProfile {
+  id: string;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  country: string | null;
+  gender: Gender | null;
+  globalRole: string;
+  createdAt: string;
+  vipLevel: number | null;
+  vipExpiresAt: string | null;
+  activeFrame: { emoji: string; colorHex: string } | null;
+  activeEntrance: { emoji: string; colorHex: string } | null;
+  activeBubble: { emoji: string; colorHex: string } | null;
+  activeMicEffect: { emoji: string; colorHex: string } | null;
+  levels: {
+    wealth: LevelInfo;
+    charm: LevelInfo;
+  };
+}
+
 export interface RechargeWallet {
   id: string;
   balance: string;

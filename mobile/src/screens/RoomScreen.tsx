@@ -241,6 +241,19 @@ export function RoomScreen({ route, navigation }: Props) {
     const frame = seat.occupant ? resolveFrame(seat.occupant, vipLevels) : null;
     const micGlow = seat.occupant?.activeMicEffect?.colorHex;
     const activeReaction = activeReactions[seat.seatNumber];
+
+    function handleSeatPress() {
+      if (seat.occupant) {
+        if (seat.occupant.id !== user?.id) {
+          navigation.navigate("UserProfile", { userId: seat.occupant.id });
+        }
+        return;
+      }
+      if (joined && !seat.isLocked) {
+        takeSeatMutation.mutate(seat.seatNumber);
+      }
+    }
+
     return (
       <View key={seat.id} style={styles.seatWrapper}>
         {activeReaction && (
@@ -258,7 +271,7 @@ export function RoomScreen({ route, navigation }: Props) {
         )}
         {isOwnerSeat && <Text style={styles.crown}>👑</Text>}
         <TouchableOpacity
-          disabled={!joined || !!seat.occupantId || seat.isLocked}
+          disabled={!seat.occupant && (!joined || seat.isLocked)}
           style={[
             styles.seatCircle,
             isVip && styles.seatCircleVip,
@@ -266,7 +279,7 @@ export function RoomScreen({ route, navigation }: Props) {
             seat.isLocked && styles.seatCircleLocked,
             micGlow && { borderColor: micGlow, borderWidth: 3, shadowColor: micGlow, shadowOpacity: 0.8, shadowRadius: 8, elevation: 6 },
           ]}
-          onPress={() => takeSeatMutation.mutate(seat.seatNumber)}
+          onPress={handleSeatPress}
         >
           {seat.occupant ? (
             <Avatar
@@ -446,7 +459,14 @@ export function RoomScreen({ route, navigation }: Props) {
                 const frame = resolveFrame(member.user, vipLevels);
                 const vipBadge = resolveVipBadge(member.user, vipLevels);
                 return (
-                  <View key={member.id} style={styles.memberRow}>
+                  <TouchableOpacity
+                    key={member.id}
+                    style={styles.memberRow}
+                    onPress={() => {
+                      setMembersModalVisible(false);
+                      navigation.navigate("UserProfile", { userId: member.userId });
+                    }}
+                  >
                     <View style={styles.memberRoleBadge}>
                       <Text style={styles.memberRole}>{ROLE_LABEL[member.role]}</Text>
                     </View>
@@ -468,7 +488,7 @@ export function RoomScreen({ route, navigation }: Props) {
                       frameColor={frame?.color}
                       frameEmoji={frame?.emoji}
                     />
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </ScrollView>

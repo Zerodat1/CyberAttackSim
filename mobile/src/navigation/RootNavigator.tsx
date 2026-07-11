@@ -24,6 +24,7 @@ import { VipScreen } from "@/screens/VipScreen";
 import { WalletScreen } from "@/screens/WalletScreen";
 import { AgentCashoutScreen } from "@/screens/AgentCashoutScreen";
 import { AgentCashoutInboxScreen } from "@/screens/AgentCashoutInboxScreen";
+import { UserProfileScreen } from "@/screens/UserProfileScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -50,6 +51,7 @@ export type AppStackParamList = {
   Wallet: undefined;
   AgentCashout: undefined;
   AgentCashoutInbox: undefined;
+  UserProfile: { userId: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -80,6 +82,7 @@ const linking: LinkingOptions<AuthStackParamList & AppStackParamList> = {
       Wallet: "wallet",
       AgentCashout: "agent-cashout",
       AgentCashoutInbox: "agent-cashout-inbox",
+      UserProfile: "u/:userId",
     },
   },
 };
@@ -135,6 +138,7 @@ function AppNavigator() {
         component={AgentCashoutInboxScreen}
         options={{ title: "طلبات سحب المضيفين" }}
       />
+      <AppStack.Screen name="UserProfile" component={UserProfileScreen} options={{ headerShown: false }} />
     </AppStack.Navigator>
   );
 }
