@@ -26,6 +26,7 @@ import { IpBanGuard } from "./common/guards/ip-ban.guard";
 import { StorageModule } from "./storage/storage.module";
 import { HealthModule } from "./health/health.module";
 import { HostAgentWithdrawalsModule } from "./host-agent-withdrawals/host-agent-withdrawals.module";
+import { LeaderboardModule } from "./leaderboard/leaderboard.module";
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { HostAgentWithdrawalsModule } from "./host-agent-withdrawals/host-agent-
     StorageModule,
     HealthModule,
     HostAgentWithdrawalsModule,
+    LeaderboardModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: IpBanGuard },

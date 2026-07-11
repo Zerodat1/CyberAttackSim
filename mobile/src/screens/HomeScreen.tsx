@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Avatar } from "@/components/Avatar";
-import { colors, radii, spacing, typography } from "@/theme";
+import { colors, gradients, radii, spacing, typography } from "@/theme";
 import type { RechargeAgencyApplication, UserWallet } from "@/api/types";
 import type { AppStackParamList } from "@/navigation/RootNavigator";
 
@@ -61,17 +61,23 @@ export function HomeScreen({ navigation }: Props) {
         )}
 
         <View style={styles.navRow}>
-          <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("RoomsList")}>
-            <View style={[styles.navCardIconWrap, { backgroundColor: "rgba(91,76,245,0.18)" }]}>
+          <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("RoomsList")} activeOpacity={0.85}>
+            <LinearGradient colors={gradients.purple as unknown as [string, string]} style={styles.navCardIconWrap}>
               <Text style={styles.navCardIcon}>🎙️</Text>
-            </View>
+            </LinearGradient>
             <Text style={styles.navCardText}>الغرف الصوتية</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("ConversationsList")}>
-            <View style={[styles.navCardIconWrap, { backgroundColor: "rgba(127,216,232,0.18)" }]}>
+          <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("ConversationsList")} activeOpacity={0.85}>
+            <LinearGradient colors={gradients.teal as unknown as [string, string]} style={styles.navCardIconWrap}>
               <Text style={styles.navCardIcon}>💬</Text>
-            </View>
+            </LinearGradient>
             <Text style={styles.navCardText}>الرسائل</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navCard} onPress={() => navigation.navigate("Leaderboard")} activeOpacity={0.85}>
+            <LinearGradient colors={gradients.gold as unknown as [string, string]} style={styles.navCardIconWrap}>
+              <Text style={styles.navCardIcon}>🏆</Text>
+            </LinearGradient>
+            <Text style={styles.navCardText}>التصنيف</Text>
           </TouchableOpacity>
         </View>
 

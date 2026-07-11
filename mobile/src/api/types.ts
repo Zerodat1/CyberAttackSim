@@ -148,6 +148,40 @@ export interface RoomDetail {
   members: RoomMember[];
 }
 
+export type LeaderboardType = "ROOM" | "WEALTH" | "CHARM";
+export type LeaderboardPeriod = "DAY" | "WEEK" | "MONTH";
+
+interface LeaderboardUserRef {
+  id: string;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+  vipLevel: number | null;
+  activeFrame: { emoji: string; colorHex: string } | null;
+}
+
+interface LeaderboardRoomRef {
+  id: string;
+  name: string;
+  backgroundUrl: string | null;
+}
+
+export interface LeaderboardUserEntry {
+  rank: number;
+  score: number;
+  level: number;
+  user: LeaderboardUserRef;
+}
+
+export interface LeaderboardRoomEntry {
+  rank: number;
+  score: number;
+  level: number;
+  room: LeaderboardRoomRef;
+}
+
+export type LeaderboardEntry = LeaderboardUserEntry | LeaderboardRoomEntry;
+
 export interface RoomChatMessage {
   id: string;
   roomId: string;

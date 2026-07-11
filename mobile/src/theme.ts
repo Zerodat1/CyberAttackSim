@@ -10,9 +10,25 @@ export const colors = {
   success: "#4cd964",
   danger: "#ff6b6b",
   giftPink: "#ff3d9a",
+  accentBlue: "#2e86ff",
+  accentTeal: "#17d4c4",
+  accentOrange: "#ff9642",
+  accentPurple: "#a83ffb",
   textPrimary: "#ffffff",
   textSecondary: "#aab0d8",
   textMuted: "#7c86c9",
+};
+
+// Reusable colorful gradient pairs for headers, badges, and podium cards.
+export const gradients = {
+  header: [colors.primary, "#8a3ffb"] as const,
+  gold: ["#ffd76a", "#f5a623"] as const,
+  blue: ["#4facfe", "#2e6bff"] as const,
+  pink: ["#ff5f9e", "#c22bd6"] as const,
+  purple: ["#8a3ffb", "#5b4cf5"] as const,
+  teal: ["#17d4c4", "#0f9bd8"] as const,
+  orange: ["#ffb347", "#ff6b6b"] as const,
+  sunset: ["#ff9a5a", "#ff3d9a", "#8a3ffb"] as const,
 };
 
 export const spacing = {
