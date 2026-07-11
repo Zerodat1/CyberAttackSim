@@ -1,0 +1,173 @@
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useAuth } from "@/auth/AuthContext";
+import { Layout } from "@/components/Layout";
+import { LoginPage } from "@/pages/LoginPage";
+import { ApplicationsPage } from "@/pages/ApplicationsPage";
+import { TopUpRequestsPage } from "@/pages/TopUpRequestsPage";
+import { WithdrawalRequestsPage } from "@/pages/WithdrawalRequestsPage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { RoomsPage } from "@/pages/RoomsPage";
+import { GiftsPage } from "@/pages/GiftsPage";
+import { GamesPage } from "@/pages/GamesPage";
+import { StorePage } from "@/pages/StorePage";
+import { VipPage } from "@/pages/VipPage";
+import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
+import { AdminsPage } from "@/pages/AdminsPage";
+import { UsersPage } from "@/pages/UsersPage";
+import { EconomyPage } from "@/pages/EconomyPage";
+import { HostAgenciesPage } from "@/pages/HostAgenciesPage";
+import { GlobalRole } from "@/api/types";
+
+const MANAGEMENT_ROLES: GlobalRole[] = ["OWNER", "RECHARGE_MANAGER"];
+
+function ProtectedLayout({
+  children,
+  allow = MANAGEMENT_ROLES,
+}: {
+  children: React.ReactNode;
+  allow?: GlobalRole[];
+}) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!allow.includes(user.globalRole)) {
+    return <Navigate to={user.globalRole === "ADMIN" ? "/admin-dashboard" : "/login"} replace />;
+  }
+
+  return <Layout>{children}</Layout>;
+}
+
+function DefaultRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={user.globalRole === "ADMIN" ? "/admin-dashboard" : "/applications"} replace />;
+}
+
+export function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/admin-dashboard"
+        element={
+          <ProtectedLayout allow={["OWNER", "RECHARGE_MANAGER", "ADMIN"]}>
+            <AdminDashboardPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/admins"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <AdminsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <UsersPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/applications"
+        element={
+          <ProtectedLayout>
+            <ApplicationsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/topups"
+        element={
+          <ProtectedLayout>
+            <TopUpRequestsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/withdrawals"
+        element={
+          <ProtectedLayout>
+            <WithdrawalRequestsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedLayout>
+            <SettingsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/rooms"
+        element={
+          <ProtectedLayout>
+            <RoomsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/gifts"
+        element={
+          <ProtectedLayout>
+            <GiftsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/games"
+        element={
+          <ProtectedLayout>
+            <GamesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/store"
+        element={
+          <ProtectedLayout>
+            <StorePage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/vip"
+        element={
+          <ProtectedLayout>
+            <VipPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/economy"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <EconomyPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/host-agencies"
+        element={
+          <ProtectedLayout allow={["OWNER"]}>
+            <HostAgenciesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route path="*" element={<DefaultRedirect />} />
+    </Routes>
+  );
+}

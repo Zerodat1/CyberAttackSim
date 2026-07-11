@@ -1,0 +1,30 @@
+import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { AuthenticatedUser } from "../common/types/authenticated-user";
+import { GiftsService } from "./gifts.service";
+import { SendGiftDto } from "./dto/send-gift.dto";
+
+@ApiTags("gifts")
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller("gifts")
+export class GiftsController {
+  constructor(private readonly giftsService: GiftsService) {}
+
+  @Get()
+  listCatalog() {
+    return this.giftsService.listCatalog();
+  }
+
+  @Post("send")
+  send(@CurrentUser() user: AuthenticatedUser, @Body() dto: SendGiftDto) {
+    return this.giftsService.sendGift(user.id, dto);
+  }
+
+  @Get("history")
+  history(@CurrentUser() user: AuthenticatedUser, @Query("direction") direction?: "sent" | "received") {
+    return this.giftsService.listHistory(user.id, direction);
+  }
+}

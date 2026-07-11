@@ -1,0 +1,57 @@
+# Production overrides — use together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# What this changes vs. the base file:
+#   - postgres/redis no longer publish ports to the host (only reachable by other
+#     containers on the compose network) — nothing but this app can touch your DB directly.
+#   - admin no longer publishes 5173 directly; both backend and admin are only reached
+#     through the nginx reverse proxy below, which terminates TLS.
+#   - adds the nginx + certbot services described in deploy/nginx/.
+services:
+  postgres:
+    ports: []
+
+  redis:
+    ports: []
+
+  backend:
+    ports: []
+    restart: always
+
+  admin:
+    ports: []
+    restart: always
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: code-nginx
+    restart: always
+    depends_on:
+      - backend
+      - admin
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env, e.g. api.yourdomain.com}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?set ADMIN_DOMAIN in .env, e.g. admin.yourdomain.com}
+      # Restrict envsubst to just these two vars so it doesn't mangle nginx's own
+      # $host / $remote_addr / etc. runtime variables in the template.
+      NGINX_ENVSUBST_FILTER: "API_DOMAIN|ADMIN_DOMAIN"
+    volumes:
+      - ./deploy/nginx/templates:/etc/nginx/templates:ro
+      - code_certbot_www:/var/www/certbot:ro
+      - code_certbot_conf:/etc/letsencrypt:ro
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: code-certbot
+    volumes:
+      - code_certbot_www:/var/www/certbot
+      - code_certbot_conf:/etc/letsencrypt
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h; done"
+
+volumes:
+  code_certbot_www:
+  code_certbot_conf:
